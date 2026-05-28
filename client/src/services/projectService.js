@@ -2,12 +2,22 @@ import axios from "axios";
 
 const API = "http://localhost:5000/api/projects";
 
-
 // GET TOKEN
 const getToken = () => {
   return localStorage.getItem("token");
 };
 
+// GET PROJECTS
+export const getProjects = async () => {
+
+  const response = await axios.get(API, {
+    headers: {
+      Authorization: `Bearer ${getToken()}`,
+    },
+  });
+
+  return response.data;
+};
 
 // CREATE PROJECT
 export const createProject = async (projectData) => {
@@ -24,23 +34,6 @@ export const createProject = async (projectData) => {
 
   return response.data;
 };
-
-
-// GET PROJECTS
-export const getProjects = async () => {
-
-  const response = await axios.get(
-    API,
-    {
-      headers: {
-        Authorization: `Bearer ${getToken()}`,
-      },
-    }
-  );
-
-  return response.data;
-};
-
 
 // DELETE PROJECT
 export const deleteProject = async (id) => {
