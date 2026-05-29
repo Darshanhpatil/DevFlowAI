@@ -2,53 +2,75 @@ import axios from "axios";
 
 const API = "http://localhost:5000/api/tasks";
 
-// GET TOKEN
-const getToken = () => {
-  return localStorage.getItem("token");
-};
-
 // CREATE TASK
 export const createTask = async (taskData) => {
 
-  const response = await axios.post(
+  const token = localStorage.getItem("token");
+
+  const { data } = await axios.post(
     API,
     taskData,
     {
       headers: {
-        Authorization: `Bearer ${getToken()}`,
+        Authorization: `Bearer ${token}`,
       },
     }
   );
 
-  return response.data;
+  return data;
 };
 
 // GET TASKS
 export const getTasks = async (projectId) => {
 
-  const response = await axios.get(
+  const token = localStorage.getItem("token");
+
+  const { data } = await axios.get(
     `${API}/${projectId}`,
     {
       headers: {
-        Authorization: `Bearer ${getToken()}`,
+        Authorization: `Bearer ${token}`,
       },
     }
   );
 
-  return response.data;
+  return data;
 };
 
 // DELETE TASK
 export const deleteTask = async (taskId) => {
 
-  const response = await axios.delete(
+  const token = localStorage.getItem("token");
+
+  const { data } = await axios.delete(
     `${API}/${taskId}`,
     {
       headers: {
-        Authorization: `Bearer ${getToken()}`,
+        Authorization: `Bearer ${token}`,
       },
     }
   );
 
-  return response.data;
+  return data;
+};
+
+// UPDATE TASK
+export const updateTask = async (
+  taskId,
+  updatedData
+) => {
+
+  const token = localStorage.getItem("token");
+
+  const { data } = await axios.put(
+    `${API}/${taskId}`,
+    updatedData,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return data;
 };

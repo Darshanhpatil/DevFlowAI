@@ -1,7 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import toast from "react-hot-toast";
+
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+} from "@hello-pangea/dnd";
 
 import {
   getProjects,
@@ -14,7 +20,21 @@ import {
   createTask,
   getTasks,
   deleteTask,
+  updateTask,
 } from "../services/taskService";
+
+import {
+  FolderKanban,
+  Search,
+  LogOut,
+  Pencil,
+  Trash2,
+  Plus,
+  CheckCircle2,
+  Clock3,
+  Loader2,
+  ListTodo,
+} from "lucide-react";
 
 function Dashboard() {
 
@@ -33,6 +53,14 @@ function Dashboard() {
   const [editId, setEditId] = useState(null);
 
   const [tasks, setTasks] = useState({});
+
+  const [editingTask, setEditingTask] = useState(null);
+
+  const [editTaskData, setEditTaskData] = useState({
+    title: "",
+    description: "",
+    status: "Pending",
+  });
 
   // PROJECT FORM
   const [formData, setFormData] = useState({
@@ -93,7 +121,7 @@ function Dashboard() {
     fetchProjects();
   }, []);
 
-  // FILTERED PROJECTS
+  // FILTER PROJECTS
   const filteredProjects = projects.filter((project) => {
 
     const matchesSearch =
@@ -108,6 +136,30 @@ function Dashboard() {
 
     return matchesSearch && matchesFilter;
   });
+
+  // STATS
+  const stats = useMemo(() => {
+
+    let totalTasks = 0;
+    let completedTasks = 0;
+
+    Object.values(tasks).forEach((projectTasks) => {
+
+      totalTasks += projectTasks.length;
+
+      completedTasks += projectTasks.filter(
+        (task) => task.status === "Completed"
+      ).length;
+
+    });
+
+    return {
+      totalProjects: projects.length,
+      totalTasks,
+      completedTasks,
+    };
+
+  }, [projects, tasks]);
 
   // PROJECT INPUT CHANGE
   const handleChange = (e) => {
@@ -258,6 +310,43 @@ function Dashboard() {
     }
   };
 
+  // EDIT TASK
+  const handleTaskEdit = (task) => {
+
+    setEditingTask(task._id);
+
+    setEditTaskData({
+      title: task.title,
+      description: task.description,
+      status: task.status,
+    });
+
+  };
+
+  // UPDATE TASK
+  const handleTaskUpdate = async (
+    taskId,
+    projectId
+  ) => {
+
+    try {
+
+      await updateTask(taskId, editTaskData);
+
+      toast.success("Task Updated");
+
+      setEditingTask(null);
+
+      fetchTasks(projectId);
+
+    } catch (error) {
+
+      toast.error("Task Update Failed");
+
+    }
+
+  };
+
   // DELETE TASK
   const handleTaskDelete = async (
     taskId,
@@ -279,6 +368,32 @@ function Dashboard() {
     }
   };
 
+  // DRAG & DROP
+  const handleDragEnd = async (result) => {
+
+    if (!result.destination) return;
+
+    const taskId = result.draggableId;
+
+    const newStatus = result.destination.droppableId;
+
+    try {
+
+      await updateTask(taskId, {
+        status: newStatus,
+      });
+
+      toast.success("Task Status Updated");
+
+      fetchProjects();
+
+    } catch (error) {
+
+      toast.error("Drag update failed");
+
+    }
+  };
+
   // LOGOUT
   const handleLogout = () => {
 
@@ -292,20 +407,21 @@ function Dashboard() {
 
   return (
 
-    <div className="min-h-screen bg-slate-950 text-white p-4 md:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-black text-white p-4 md:p-8">
 
       <div className="max-w-7xl mx-auto">
 
         {/* TOP BAR */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-5 mb-10">
+        <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mb-10">
 
           <div>
 
-            <h1 className="text-3xl md:text-4xl font-bold">
+            <h1 className="text-4xl md:text-5xl font-black flex items-center gap-3">
+              <FolderKanban className="text-blue-500" size={40} />
               Welcome {user?.name}
             </h1>
 
-            <p className="text-slate-400 mt-2">
+            <p className="text-slate-400 mt-3 text-lg">
               DevFlowAI Dashboard
             </p>
 
@@ -313,15 +429,87 @@ function Dashboard() {
 
           <button
             onClick={handleLogout}
-            className="bg-red-500 hover:bg-red-600 px-5 py-2 rounded-lg transition-all"
+            className="flex items-center gap-2 bg-red-500 hover:bg-red-600 px-5 py-3 rounded-xl transition-all font-semibold"
           >
+            <LogOut size={18} />
             Logout
           </button>
 
         </div>
 
+        {/* STATS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+
+          <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+
+            <div className="flex items-center justify-between">
+
+              <div>
+
+                <p className="text-slate-400 text-sm">
+                  Total Projects
+                </p>
+
+                <h2 className="text-3xl font-bold mt-2">
+                  {stats.totalProjects}
+                </h2>
+
+              </div>
+
+              <FolderKanban className="text-blue-500" size={35} />
+
+            </div>
+
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+
+            <div className="flex items-center justify-between">
+
+              <div>
+
+                <p className="text-slate-400 text-sm">
+                  Total Tasks
+                </p>
+
+                <h2 className="text-3xl font-bold mt-2">
+                  {stats.totalTasks}
+                </h2>
+
+              </div>
+
+              <ListTodo className="text-yellow-400" size={35} />
+
+            </div>
+
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+
+            <div className="flex items-center justify-between">
+
+              <div>
+
+                <p className="text-slate-400 text-sm">
+                  Completed Tasks
+                </p>
+
+                <h2 className="text-3xl font-bold mt-2">
+                  {stats.completedTasks}
+                </h2>
+
+              </div>
+
+              <CheckCircle2 className="text-green-500" size={35} />
+
+            </div>
+
+          </div>
+
+        </div>
+
         {/* PROJECT FORM */}
-        <div className="bg-slate-900 p-6 rounded-2xl mb-10 shadow-lg">
+        <div className="bg-slate-900/80 backdrop-blur-md p-6 rounded-3xl mb-10 shadow-2xl border border-slate-800">
 
           <h2 className="text-2xl font-bold mb-5">
 
@@ -340,7 +528,7 @@ function Dashboard() {
               placeholder="Project title"
               value={formData.title}
               onChange={handleChange}
-              className="p-3 rounded-lg bg-slate-800 outline-none border border-transparent focus:border-blue-500"
+              className="p-3 rounded-xl bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
 
@@ -350,7 +538,7 @@ function Dashboard() {
               placeholder="Project description"
               value={formData.description}
               onChange={handleChange}
-              className="p-3 rounded-lg bg-slate-800 outline-none border border-transparent focus:border-blue-500"
+              className="p-3 rounded-xl bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
 
@@ -358,7 +546,7 @@ function Dashboard() {
               name="status"
               value={formData.status}
               onChange={handleChange}
-              className="p-3 rounded-lg bg-slate-800 outline-none border border-transparent focus:border-blue-500"
+              className="p-3 rounded-xl bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option>Pending</option>
               <option>In Progress</option>
@@ -366,8 +554,9 @@ function Dashboard() {
             </select>
 
             <button
-              className="bg-blue-600 hover:bg-blue-700 transition-all py-3 rounded-lg col-span-1 md:col-span-3 font-semibold"
+              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 transition-all py-3 rounded-xl col-span-1 md:col-span-3 font-semibold"
             >
+              <Plus size={18} />
               {editId ? "Update Project" : "Create Project"}
             </button>
 
@@ -378,18 +567,27 @@ function Dashboard() {
         {/* SEARCH + FILTER */}
         <div className="flex flex-col md:flex-row gap-4 mb-8">
 
-          <input
-            type="text"
-            placeholder="Search Projects..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 p-3 rounded-xl bg-slate-900 outline-none border border-slate-700"
-          />
+          <div className="relative flex-1">
+
+            <Search
+              className="absolute left-4 top-3.5 text-slate-400"
+              size={18}
+            />
+
+            <input
+              type="text"
+              placeholder="Search Projects..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-11 p-3 rounded-2xl bg-slate-900 outline-none border border-slate-700 focus:ring-2 focus:ring-blue-500"
+            />
+
+          </div>
 
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="p-3 rounded-xl bg-slate-900 outline-none border border-slate-700"
+            className="p-3 rounded-2xl bg-slate-900 outline-none border border-slate-700 focus:ring-2 focus:ring-blue-500"
           >
             <option value="All">All</option>
             <option value="Pending">Pending</option>
@@ -402,13 +600,22 @@ function Dashboard() {
         {/* LOADING */}
         {loading ? (
 
-          <div className="text-center text-2xl text-slate-400 py-20 animate-pulse">
-            Loading Projects...
+          <div className="flex flex-col items-center justify-center py-24">
+
+            <Loader2
+              className="animate-spin text-blue-500"
+              size={50}
+            />
+
+            <p className="text-slate-400 mt-4 text-xl">
+              Loading Projects...
+            </p>
+
           </div>
 
         ) : (
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 
             {filteredProjects.length > 0 ? (
 
@@ -416,16 +623,37 @@ function Dashboard() {
 
                 <div
                   key={project._id}
-                  className="bg-slate-900 p-5 rounded-2xl shadow-lg hover:-translate-y-2 hover:scale-[1.02] transition-all duration-300 ease-in-out"
+                  className="bg-slate-900/80 backdrop-blur-md border border-slate-800 p-5 rounded-3xl shadow-xl hover:-translate-y-2 hover:shadow-blue-500/10 transition-all duration-300"
                 >
 
-                  <h2 className="text-2xl font-bold">
-                    {project.title}
-                  </h2>
+                  <div className="flex justify-between items-start gap-3">
 
-                  <p className="text-slate-400 mt-2">
-                    {project.description}
-                  </p>
+                    <div>
+
+                      <h2 className="text-2xl font-bold wrap-break-word">
+                        {project.title}
+                      </h2>
+
+                      <p className="text-slate-400 mt-2 text-sm wrap-break-word">
+                        {project.description}
+                      </p>
+
+                    </div>
+
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap
+                      ${
+                        project.status === "Completed"
+                          ? "bg-green-600"
+                          : project.status === "In Progress"
+                          ? "bg-blue-600"
+                          : "bg-yellow-500 text-black"
+                      }`}
+                    >
+                      {project.status}
+                    </span>
+
+                  </div>
 
                   {/* TASK FORM */}
                   <div className="mt-5 space-y-3">
@@ -441,7 +669,7 @@ function Dashboard() {
                           e.target.value
                         )
                       }
-                      className="w-full p-2 rounded-lg bg-slate-800 outline-none"
+                      className="w-full p-3 rounded-xl bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
                     />
 
                     <input
@@ -455,7 +683,7 @@ function Dashboard() {
                           e.target.value
                         )
                       }
-                      className="w-full p-2 rounded-lg bg-slate-800 outline-none"
+                      className="w-full p-3 rounded-xl bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
                     />
 
                     <select
@@ -469,7 +697,7 @@ function Dashboard() {
                           e.target.value
                         )
                       }
-                      className="w-full p-2 rounded-lg bg-slate-800 outline-none"
+                      className="w-full p-3 rounded-xl bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option>Pending</option>
                       <option>In Progress</option>
@@ -478,109 +706,246 @@ function Dashboard() {
 
                     <button
                       onClick={() => handleTaskCreate(project._id)}
-                      className="bg-blue-600 hover:bg-blue-700 w-full py-2 rounded-lg transition-all"
+                      className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 w-full py-3 rounded-xl transition-all font-semibold"
                     >
+                      <Plus size={18} />
                       Add Task
                     </button>
 
                   </div>
 
-                  {/* TASK LIST */}
-                  <div className="mt-5 space-y-3">
+                  {/* KANBAN BOARD */}
+                  <DragDropContext onDragEnd={handleDragEnd}>
 
-                    {tasks[project._id]?.length > 0 ? (
+                    <div className="mt-6 grid gap-4">
 
-                      tasks[project._id].map((task) => (
+                      {["Pending", "In Progress", "Completed"].map((status) => (
 
-                        <div
-                          key={task._id}
-                          className="bg-slate-800 p-3 rounded-lg"
+                        <Droppable
+                          droppableId={status}
+                          key={status}
                         >
 
-                          <h3 className="font-semibold">
-                            {task.title}
-                          </h3>
+                          {(provided) => (
 
-                          <p className="text-sm text-slate-400 mt-1">
-                            {task.description}
-                          </p>
-
-                          <div className="flex justify-between items-center mt-3">
-
-                            <span
-                              className={`px-2 py-1 rounded text-xs
-                              ${
-                                task.status === "Completed"
-                                  ? "bg-green-600"
-                                  : task.status === "In Progress"
-                                  ? "bg-blue-600"
-                                  : "bg-yellow-500 text-black"
-                              }`}
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.droppableProps}
+                              className="bg-slate-800 p-4 rounded-2xl min-h-40"
                             >
-                              {task.status}
-                            </span>
 
-                            <button
-                              onClick={() =>
-                                handleTaskDelete(
-                                  task._id,
-                                  project._id
+                              <h3
+                                className={`text-lg font-bold mb-4 flex items-center gap-2
+                                ${
+                                  status === "Pending"
+                                    ? "text-yellow-400"
+                                    : status === "In Progress"
+                                    ? "text-blue-400"
+                                    : "text-green-400"
+                                }`}
+                              >
+
+                                {status === "Pending" && (
+                                  <Clock3 size={18} />
+                                )}
+
+                                {status === "In Progress" && (
+                                  <Loader2 size={18} />
+                                )}
+
+                                {status === "Completed" && (
+                                  <CheckCircle2 size={18} />
+                                )}
+
+                                {status}
+
+                              </h3>
+
+                              {tasks[project._id]
+                                ?.filter((task) =>
+                                  task.status === status
                                 )
-                              }
-                              className="bg-red-500 hover:bg-red-600 px-3 py-1 rounded-lg text-sm transition-all"
-                            >
-                              Delete
-                            </button>
+                                .map((task, index) => (
 
-                          </div>
+                                  <Draggable
+                                    key={task._id}
+                                    draggableId={task._id}
+                                    index={index}
+                                  >
 
-                        </div>
+                                    {(provided) => (
 
-                      ))
+                                      <div
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        {...provided.dragHandleProps}
+                                        className="bg-slate-700 p-4 rounded-2xl mb-3 hover:bg-slate-600 transition-all"
+                                      >
 
-                    ) : (
+                                        {editingTask === task._id ? (
 
-                      <p className="text-slate-500 text-sm">
-                        No Tasks Yet
-                      </p>
+                                          <div className="space-y-3">
 
-                    )}
+                                            <input
+                                              type="text"
+                                              value={editTaskData.title}
+                                              onChange={(e) =>
+                                                setEditTaskData({
+                                                  ...editTaskData,
+                                                  title: e.target.value,
+                                                })
+                                              }
+                                              className="w-full p-2 rounded-lg bg-slate-800 outline-none"
+                                            />
 
-                  </div>
+                                            <input
+                                              type="text"
+                                              value={editTaskData.description}
+                                              onChange={(e) =>
+                                                setEditTaskData({
+                                                  ...editTaskData,
+                                                  description: e.target.value,
+                                                })
+                                              }
+                                              className="w-full p-2 rounded-lg bg-slate-800 outline-none"
+                                            />
 
-                  {/* FOOTER */}
-                  <div className="flex justify-between items-center mt-5">
+                                            <select
+                                              value={editTaskData.status}
+                                              onChange={(e) =>
+                                                setEditTaskData({
+                                                  ...editTaskData,
+                                                  status: e.target.value,
+                                                })
+                                              }
+                                              className="w-full p-2 rounded-lg bg-slate-800 outline-none"
+                                            >
+                                              <option>Pending</option>
+                                              <option>In Progress</option>
+                                              <option>Completed</option>
+                                            </select>
 
-                    <span
-                      className={`px-3 py-1 rounded-lg text-sm
-                      ${
-                        project.status === "Completed"
-                          ? "bg-green-600"
-                          : project.status === "In Progress"
-                          ? "bg-blue-600"
-                          : "bg-yellow-500 text-black"
-                      }`}
-                    >
-                      {project.status}
-                    </span>
+                                            <div className="flex gap-2">
 
-                    <div className="flex gap-2">
+                                              <button
+                                                onClick={() =>
+                                                  handleTaskUpdate(
+                                                    task._id,
+                                                    project._id
+                                                  )
+                                                }
+                                                className="bg-green-600 hover:bg-green-700 px-3 py-2 rounded-lg text-sm"
+                                              >
+                                                Save
+                                              </button>
 
-                      <button
-                        onClick={() => handleEdit(project)}
-                        className="bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded-lg transition-all"
-                      >
-                        Edit
-                      </button>
+                                              <button
+                                                onClick={() =>
+                                                  setEditingTask(null)
+                                                }
+                                                className="bg-gray-500 hover:bg-gray-600 px-3 py-2 rounded-lg text-sm"
+                                              >
+                                                Cancel
+                                              </button>
 
-                      <button
-                        onClick={() => handleDelete(project._id)}
-                        className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition-all"
-                      >
-                        Delete
-                      </button>
+                                            </div>
+
+                                          </div>
+
+                                        ) : (
+
+                                          <>
+
+                                            <h3 className="font-semibold wrap-break-word">
+                                              {task.title}
+                                            </h3>
+
+                                            <p className="text-sm text-slate-300 mt-1 wrap-break-word">
+                                              {task.description}
+                                            </p>
+
+                                            <div className="flex flex-wrap gap-2 mt-4">
+
+                                              <button
+                                                onClick={() =>
+                                                  handleTaskEdit(task)
+                                                }
+                                                className="flex items-center gap-1 bg-yellow-500 hover:bg-yellow-600 px-3 py-1 rounded-lg text-sm"
+                                              >
+                                                <Pencil size={14} />
+                                                Edit
+                                              </button>
+
+                                              <button
+                                                onClick={() =>
+                                                  handleTaskDelete(
+                                                    task._id,
+                                                    project._id
+                                                  )
+                                                }
+                                                className="flex items-center gap-1 bg-red-500 hover:bg-red-600 px-3 py-1 rounded-lg text-sm"
+                                              >
+                                                <Trash2 size={14} />
+                                                Delete
+                                              </button>
+
+                                            </div>
+
+                                          </>
+
+                                        )}
+
+                                      </div>
+
+                                    )}
+
+                                  </Draggable>
+
+                                ))}
+
+                              {provided.placeholder}
+
+                              {tasks[project._id]
+                                ?.filter((task) =>
+                                  task.status === status
+                                ).length === 0 && (
+
+                                <p className="text-slate-500 text-sm">
+                                  No tasks
+                                </p>
+
+                              )}
+
+                            </div>
+
+                          )}
+
+                        </Droppable>
+
+                      ))}
 
                     </div>
+
+                  </DragDropContext>
+
+                  {/* FOOTER */}
+                  <div className="flex justify-between items-center mt-6 gap-3">
+
+                    <button
+                      onClick={() => handleEdit(project)}
+                      className="flex items-center justify-center gap-2 bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded-xl transition-all w-full"
+                    >
+                      <Pencil size={16} />
+                      Edit
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(project._id)}
+                      className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 px-4 py-2 rounded-xl transition-all w-full"
+                    >
+                      <Trash2 size={16} />
+                      Delete
+                    </button>
 
                   </div>
 
@@ -590,9 +955,14 @@ function Dashboard() {
 
             ) : (
 
-              <div className="col-span-full text-center py-20">
+              <div className="col-span-full text-center py-24">
 
-                <h2 className="text-3xl font-bold text-slate-300">
+                <FolderKanban
+                  className="mx-auto text-slate-600"
+                  size={70}
+                />
+
+                <h2 className="text-3xl font-bold text-slate-300 mt-5">
                   No Projects Found
                 </h2>
 
