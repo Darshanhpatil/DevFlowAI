@@ -49,3 +49,19 @@ export const deleteProject = async (id) => {
 
   return response.data;
 };
+
+// UPDATE PROJECT
+export const updateProject = async (id, projectData) => {
+
+  const response = await axios.put(
+    `${API}/${id}`,
+    projectData,
+    {
+      headers: {
+        Authorization: `Bearer ${getToken()}`,
+      },
+    }
+  );
+
+  return response.data;
+};
