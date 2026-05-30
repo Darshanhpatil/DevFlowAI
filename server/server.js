@@ -1,17 +1,20 @@
-import express from "express";
 import dotenv from "dotenv";
+dotenv.config();
+
+import express from "express";
 import cors from "cors";
 import connectDB from "./config/db.js";
 
 import authRoutes from "./routes/authRoutes.js";
 import projectRoutes from "./routes/projectRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";
-
-dotenv.config();
+import aiRoutes from "./routes/aiRoutes.js";
 
 connectDB();
 
 const app = express();
+
+console.log("Gemini Key:", process.env.GEMINI_API_KEY);
 
 app.use(cors());
 
@@ -22,7 +25,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/tasks", taskRoutes);
-
+app.use("/api/ai", aiRoutes);
 
 app.get("/", (req, res) => {
   res.send("DevFlow AI API Running");

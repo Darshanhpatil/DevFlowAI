@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import toast from "react-hot-toast";
-
 import {
   DragDropContext,
   Droppable,
@@ -36,26 +34,22 @@ import {
   ListTodo,
 } from "lucide-react";
 
+import {
+  generateAITasks 
+} from "../services/aiService";
+
 function Dashboard() {
-
   const navigate = useNavigate();
-
   const user = JSON.parse(localStorage.getItem("user"));
 
   const [projects, setProjects] = useState([]);
-
   const [loading, setLoading] = useState(true);
-
   const [searchTerm, setSearchTerm] = useState("");
-
   const [filterStatus, setFilterStatus] = useState("All");
-
   const [editId, setEditId] = useState(null);
 
   const [tasks, setTasks] = useState({});
-
   const [editingTask, setEditingTask] = useState(null);
-
   const [editTaskData, setEditTaskData] = useState({
     title: "",
     description: "",
@@ -74,46 +68,31 @@ function Dashboard() {
 
   // FETCH TASKS
   const fetchTasks = async (projectId) => {
-
     try {
-
       const data = await getTasks(projectId);
-
       setTasks((prev) => ({
         ...prev,
         [projectId]: data,
       }));
-
     } catch (error) {
-
       console.log(error);
-
     }
   };
 
   // FETCH PROJECTS
   const fetchProjects = async () => {
-
     try {
-
       setLoading(true);
-
       const data = await getProjects();
-
       setProjects(data);
 
       data.forEach((project) => {
         fetchTasks(project._id);
       });
-
     } catch (error) {
-
       toast.error("Failed to load projects");
-
     } finally {
-
       setLoading(false);
-
     }
   };
 
@@ -123,12 +102,10 @@ function Dashboard() {
 
   // FILTER PROJECTS
   const filteredProjects = projects.filter((project) => {
-
     const matchesSearch =
       project.title
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
-
     const matchesFilter =
       filterStatus === "All"
         ? true
@@ -139,18 +116,14 @@ function Dashboard() {
 
   // STATS
   const stats = useMemo(() => {
-
     let totalTasks = 0;
     let completedTasks = 0;
 
     Object.values(tasks).forEach((projectTasks) => {
-
       totalTasks += projectTasks.length;
-
       completedTasks += projectTasks.filter(
         (task) => task.status === "Completed"
       ).length;
-
     });
 
     return {
@@ -158,40 +131,27 @@ function Dashboard() {
       totalTasks,
       completedTasks,
     };
-
   }, [projects, tasks]);
 
   // PROJECT INPUT CHANGE
   const handleChange = (e) => {
-
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
-
   };
 
   // CREATE / UPDATE PROJECT
   const handleSubmit = async (e) => {
-
     e.preventDefault();
-
     try {
-
       if (editId) {
-
         await updateProject(editId, formData);
-
         toast.success("Project Updated");
-
         setEditId(null);
-
       } else {
-
         await createProject(formData);
-
         toast.success("Project Created");
-
       }
 
       setFormData({
@@ -199,45 +159,31 @@ function Dashboard() {
         description: "",
         status: "Pending",
       });
-
       fetchProjects();
-
     } catch (error) {
-
       toast.error("Something went wrong");
-
     }
   };
 
   // DELETE PROJECT
   const handleDelete = async (id) => {
-
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this project?"
     );
-
     if (!confirmDelete) return;
 
     try {
-
       await deleteProject(id);
-
       toast.success("Project Deleted");
-
       fetchProjects();
-
     } catch (error) {
-
       toast.error("Delete failed");
-
     }
   };
 
   // EDIT PROJECT
   const handleEdit = (project) => {
-
     setEditId(project._id);
-
     setFormData({
       title: project.title,
       description: project.description,
@@ -256,7 +202,6 @@ function Dashboard() {
     field,
     value
   ) => {
-
     setTaskFormData((prev) => ({
       ...prev,
       [projectId]: {
@@ -264,14 +209,11 @@ function Dashboard() {
         [field]: value,
       },
     }));
-
   };
 
   // CREATE TASK
   const handleTaskCreate = async (projectId) => {
-
     try {
-
       const currentTask = taskFormData[projectId];
 
       if (
@@ -300,27 +242,20 @@ function Dashboard() {
       }));
 
       fetchTasks(projectId);
-
     } catch (error) {
-
       console.log(error);
-
       toast.error("Failed to create task");
-
     }
   };
 
   // EDIT TASK
   const handleTaskEdit = (task) => {
-
     setEditingTask(task._id);
-
     setEditTaskData({
       title: task.title,
       description: task.description,
       status: task.status,
     });
-
   };
 
   // UPDATE TASK
@@ -328,23 +263,14 @@ function Dashboard() {
     taskId,
     projectId
   ) => {
-
     try {
-
       await updateTask(taskId, editTaskData);
-
       toast.success("Task Updated");
-
       setEditingTask(null);
-
       fetchTasks(projectId);
-
     } catch (error) {
-
       toast.error("Task Update Failed");
-
     }
-
   };
 
   // DELETE TASK
@@ -352,81 +278,84 @@ function Dashboard() {
     taskId,
     projectId
   ) => {
-
     try {
-
       await deleteTask(taskId);
-
       toast.success("Task Deleted");
-
       fetchTasks(projectId);
-
     } catch (error) {
-
       toast.error("Failed to delete task");
-
     }
   };
 
   // DRAG & DROP
   const handleDragEnd = async (result) => {
-
     if (!result.destination) return;
 
     const taskId = result.draggableId;
-
     const newStatus = result.destination.droppableId;
 
     try {
-
       await updateTask(taskId, {
         status: newStatus,
       });
-
       toast.success("Task Status Updated");
-
       fetchProjects();
-
     } catch (error) {
-
       toast.error("Drag update failed");
-
     }
   };
+  
+  // GENERATE AI TASKs
+  const handleGenerateAI = async (projectId, projectTitle) => {
+  try {
+
+    const data = await generateAITasks(projectTitle);
+
+    const aiTasks = data.tasks;
+
+    for (const task of aiTasks) {
+      await createTask({
+        title: task.title,
+        description: task.description,
+        status: task.status,
+        project: projectId,
+      });
+    }
+
+    toast.success("AI Tasks Generated");
+
+    fetchTasks(projectId);
+
+  } catch (error) {
+
+    console.log(error);
+
+    toast.error("AI Generation Failed");
+
+  }
+};
 
   // LOGOUT
   const handleLogout = () => {
-
     localStorage.removeItem("token");
-
     localStorage.removeItem("user");
-
     navigate("/login");
-
   };
 
   return (
-
     <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-black text-white p-4 md:p-8">
-
       <div className="max-w-7xl mx-auto">
-
         {/* TOP BAR */}
         <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mb-10">
-
           <div>
-
             <h1 className="text-4xl md:text-5xl font-black flex items-center gap-3">
               <FolderKanban className="text-blue-500" size={40} />
               Welcome {user?.name}
             </h1>
-
             <p className="text-slate-400 mt-3 text-lg">
               DevFlowAI Dashboard
             </p>
-
           </div>
-
           <button
             onClick={handleLogout}
             className="flex items-center gap-2 bg-red-500 hover:bg-red-600 px-5 py-3 rounded-xl transition-all font-semibold"
@@ -434,94 +363,60 @@ function Dashboard() {
             <LogOut size={18} />
             Logout
           </button>
-
         </div>
 
         {/* STATS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
-
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-
             <div className="flex items-center justify-between">
-
               <div>
-
                 <p className="text-slate-400 text-sm">
                   Total Projects
                 </p>
-
                 <h2 className="text-3xl font-bold mt-2">
                   {stats.totalProjects}
                 </h2>
-
               </div>
-
               <FolderKanban className="text-blue-500" size={35} />
-
             </div>
-
           </div>
-
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-
             <div className="flex items-center justify-between">
-
               <div>
-
                 <p className="text-slate-400 text-sm">
                   Total Tasks
                 </p>
-
                 <h2 className="text-3xl font-bold mt-2">
                   {stats.totalTasks}
                 </h2>
-
               </div>
-
               <ListTodo className="text-yellow-400" size={35} />
-
             </div>
-
           </div>
-
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-
             <div className="flex items-center justify-between">
-
               <div>
-
                 <p className="text-slate-400 text-sm">
                   Completed Tasks
                 </p>
-
                 <h2 className="text-3xl font-bold mt-2">
                   {stats.completedTasks}
                 </h2>
-
               </div>
-
               <CheckCircle2 className="text-green-500" size={35} />
-
             </div>
-
           </div>
-
         </div>
 
         {/* PROJECT FORM */}
         <div className="bg-slate-900/80 backdrop-blur-md p-6 rounded-3xl mb-10 shadow-2xl border border-slate-800">
-
           <h2 className="text-2xl font-bold mb-5">
-
             {editId ? "Update Project" : "Create Project"}
-
           </h2>
-
           <form
             onSubmit={handleSubmit}
             className="grid md:grid-cols-3 gap-4"
           >
-
             <input
               type="text"
               name="title"
@@ -531,7 +426,6 @@ function Dashboard() {
               className="p-3 rounded-xl bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
-
             <input
               type="text"
               name="description"
@@ -541,7 +435,6 @@ function Dashboard() {
               className="p-3 rounded-xl bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
-
             <select
               name="status"
               value={formData.status}
@@ -552,28 +445,22 @@ function Dashboard() {
               <option>In Progress</option>
               <option>Completed</option>
             </select>
-
             <button
               className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 transition-all py-3 rounded-xl col-span-1 md:col-span-3 font-semibold"
             >
               <Plus size={18} />
               {editId ? "Update Project" : "Create Project"}
             </button>
-
           </form>
-
         </div>
 
         {/* SEARCH + FILTER */}
         <div className="flex flex-col md:flex-row gap-4 mb-8">
-
           <div className="relative flex-1">
-
             <Search
               className="absolute left-4 top-3.5 text-slate-400"
               size={18}
             />
-
             <input
               type="text"
               placeholder="Search Projects..."
@@ -581,9 +468,7 @@ function Dashboard() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-11 p-3 rounded-2xl bg-slate-900 outline-none border border-slate-700 focus:ring-2 focus:ring-blue-500"
             />
-
           </div>
-
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
@@ -594,52 +479,36 @@ function Dashboard() {
             <option value="In Progress">In Progress</option>
             <option value="Completed">Completed</option>
           </select>
-
         </div>
 
         {/* LOADING */}
         {loading ? (
-
           <div className="flex flex-col items-center justify-center py-24">
-
             <Loader2
               className="animate-spin text-blue-500"
               size={50}
             />
-
             <p className="text-slate-400 mt-4 text-xl">
               Loading Projects...
             </p>
-
           </div>
-
         ) : (
-
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-
             {filteredProjects.length > 0 ? (
-
               filteredProjects.map((project) => (
-
                 <div
                   key={project._id}
                   className="bg-slate-900/80 backdrop-blur-md border border-slate-800 p-5 rounded-3xl shadow-xl hover:-translate-y-2 hover:shadow-blue-500/10 transition-all duration-300"
                 >
-
                   <div className="flex justify-between items-start gap-3">
-
                     <div>
-
                       <h2 className="text-2xl font-bold wrap-break-word">
                         {project.title}
                       </h2>
-
                       <p className="text-slate-400 mt-2 text-sm wrap-break-word">
                         {project.description}
                       </p>
-
                     </div>
-
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap
                       ${
@@ -652,12 +521,10 @@ function Dashboard() {
                     >
                       {project.status}
                     </span>
-
                   </div>
 
                   {/* TASK FORM */}
                   <div className="mt-5 space-y-3">
-
                     <input
                       type="text"
                       placeholder="Task title"
@@ -671,7 +538,6 @@ function Dashboard() {
                       }
                       className="w-full p-3 rounded-xl bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
                     />
-
                     <input
                       type="text"
                       placeholder="Task description"
@@ -685,7 +551,6 @@ function Dashboard() {
                       }
                       className="w-full p-3 rounded-xl bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
                     />
-
                     <select
                       value={
                         taskFormData[project._id]?.status || "Pending"
@@ -703,7 +568,6 @@ function Dashboard() {
                       <option>In Progress</option>
                       <option>Completed</option>
                     </select>
-
                     <button
                       onClick={() => handleTaskCreate(project._id)}
                       className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 w-full py-3 rounded-xl transition-all font-semibold"
@@ -711,29 +575,22 @@ function Dashboard() {
                       <Plus size={18} />
                       Add Task
                     </button>
-
                   </div>
 
                   {/* KANBAN BOARD */}
                   <DragDropContext onDragEnd={handleDragEnd}>
-
                     <div className="mt-6 grid gap-4">
-
                       {["Pending", "In Progress", "Completed"].map((status) => (
-
                         <Droppable
                           droppableId={status}
                           key={status}
                         >
-
                           {(provided) => (
-
                             <div
                               ref={provided.innerRef}
                               {...provided.droppableProps}
                               className="bg-slate-800 p-4 rounded-2xl min-h-40"
                             >
-
                               <h3
                                 className={`text-lg font-bold mb-4 flex items-center gap-2
                                 ${
@@ -744,48 +601,36 @@ function Dashboard() {
                                     : "text-green-400"
                                 }`}
                               >
-
                                 {status === "Pending" && (
                                   <Clock3 size={18} />
                                 )}
-
                                 {status === "In Progress" && (
                                   <Loader2 size={18} />
                                 )}
-
                                 {status === "Completed" && (
                                   <CheckCircle2 size={18} />
                                 )}
-
                                 {status}
-
                               </h3>
-
                               {tasks[project._id]
                                 ?.filter((task) =>
                                   task.status === status
                                 )
                                 .map((task, index) => (
-
                                   <Draggable
                                     key={task._id}
                                     draggableId={task._id}
                                     index={index}
                                   >
-
                                     {(provided) => (
-
                                       <div
                                         ref={provided.innerRef}
                                         {...provided.draggableProps}
                                         {...provided.dragHandleProps}
                                         className="bg-slate-700 p-4 rounded-2xl mb-3 hover:bg-slate-600 transition-all"
                                       >
-
                                         {editingTask === task._id ? (
-
                                           <div className="space-y-3">
-
                                             <input
                                               type="text"
                                               value={editTaskData.title}
@@ -797,7 +642,6 @@ function Dashboard() {
                                               }
                                               className="w-full p-2 rounded-lg bg-slate-800 outline-none"
                                             />
-
                                             <input
                                               type="text"
                                               value={editTaskData.description}
@@ -809,7 +653,6 @@ function Dashboard() {
                                               }
                                               className="w-full p-2 rounded-lg bg-slate-800 outline-none"
                                             />
-
                                             <select
                                               value={editTaskData.status}
                                               onChange={(e) =>
@@ -824,9 +667,7 @@ function Dashboard() {
                                               <option>In Progress</option>
                                               <option>Completed</option>
                                             </select>
-
                                             <div className="flex gap-2">
-
                                               <button
                                                 onClick={() =>
                                                   handleTaskUpdate(
@@ -838,7 +679,6 @@ function Dashboard() {
                                               >
                                                 Save
                                               </button>
-
                                               <button
                                                 onClick={() =>
                                                   setEditingTask(null)
@@ -847,25 +687,17 @@ function Dashboard() {
                                               >
                                                 Cancel
                                               </button>
-
                                             </div>
-
                                           </div>
-
                                         ) : (
-
                                           <>
-
                                             <h3 className="font-semibold wrap-break-word">
                                               {task.title}
                                             </h3>
-
                                             <p className="text-sm text-slate-300 mt-1 wrap-break-word">
                                               {task.description}
                                             </p>
-
                                             <div className="flex flex-wrap gap-2 mt-4">
-
                                               <button
                                                 onClick={() =>
                                                   handleTaskEdit(task)
@@ -875,7 +707,6 @@ function Dashboard() {
                                                 <Pencil size={14} />
                                                 Edit
                                               </button>
-
                                               <button
                                                 onClick={() =>
                                                   handleTaskDelete(
@@ -888,49 +719,38 @@ function Dashboard() {
                                                 <Trash2 size={14} />
                                                 Delete
                                               </button>
-
                                             </div>
-
                                           </>
-
                                         )}
-
                                       </div>
-
                                     )}
-
                                   </Draggable>
-
                                 ))}
-
                               {provided.placeholder}
-
                               {tasks[project._id]
                                 ?.filter((task) =>
                                   task.status === status
                                 ).length === 0 && (
-
                                 <p className="text-slate-500 text-sm">
                                   No tasks
                                 </p>
-
                               )}
-
                             </div>
-
                           )}
-
                         </Droppable>
-
                       ))}
-
                     </div>
-
                   </DragDropContext>
 
                   {/* FOOTER */}
                   <div className="flex justify-between items-center mt-6 gap-3">
-
+                    <button
+                      onClick={() => handleGenerateAI(project)}
+                      className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-xl transition-all w-full"
+                    >
+                      <Plus size={16} />
+                    Generate AI Tasks
+                    </button>
                     <button
                       onClick={() => handleEdit(project)}
                       className="flex items-center justify-center gap-2 bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded-xl transition-all w-full"
@@ -938,7 +758,6 @@ function Dashboard() {
                       <Pencil size={16} />
                       Edit
                     </button>
-
                     <button
                       onClick={() => handleDelete(project._id)}
                       className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 px-4 py-2 rounded-xl transition-all w-full"
@@ -946,42 +765,27 @@ function Dashboard() {
                       <Trash2 size={16} />
                       Delete
                     </button>
-
                   </div>
-
                 </div>
-
               ))
-
             ) : (
-
               <div className="col-span-full text-center py-24">
-
                 <FolderKanban
                   className="mx-auto text-slate-600"
                   size={70}
                 />
-
                 <h2 className="text-3xl font-bold text-slate-300 mt-5">
                   No Projects Found
                 </h2>
-
                 <p className="text-slate-500 mt-3">
                   Create your first project 🚀
                 </p>
-
               </div>
-
             )}
-
           </div>
-
         )}
-
       </div>
-
     </div>
-
   );
 }
 
