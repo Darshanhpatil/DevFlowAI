@@ -1,11 +1,8 @@
 import Task from "../models/Task.js";
 
-
 // CREATE TASK
 export const createTask = async (req, res) => {
-
   try {
-
     const { title, description, status, project } = req.body;
 
     const task = await Task.create({
@@ -16,23 +13,23 @@ export const createTask = async (req, res) => {
       user: req.user.id,
     });
 
+    // Socket.IO Event
+    const io = req.app.get("io");
+    io.emit("taskCreated", task);
+
     res.status(201).json(task);
 
   } catch (error) {
-
     res.status(500).json({
       message: error.message,
     });
-
   }
 };
 
 
 // GET TASKS
 export const getTasks = async (req, res) => {
-
   try {
-
     const tasks = await Task.find({
       project: req.params.projectId,
       user: req.user.id,
@@ -41,18 +38,15 @@ export const getTasks = async (req, res) => {
     res.status(200).json(tasks);
 
   } catch (error) {
-
     res.status(500).json({
       message: error.message,
     });
-
   }
 };
 
 
 // UPDATE TASK
 export const updateTask = async (req, res) => {
-
   try {
 
     const task = await Task.findById(req.params.id);
@@ -71,21 +65,22 @@ export const updateTask = async (req, res) => {
       }
     );
 
+    // Socket.IO Event
+    const io = req.app.get("io");
+    io.emit("taskUpdated", updatedTask);
+
     res.status(200).json(updatedTask);
 
   } catch (error) {
-
     res.status(500).json({
       message: error.message,
     });
-
   }
 };
 
 
 // DELETE TASK
 export const deleteTask = async (req, res) => {
-
   try {
 
     const task = await Task.findById(req.params.id);
@@ -98,15 +93,17 @@ export const deleteTask = async (req, res) => {
 
     await task.deleteOne();
 
+    // Socket.IO Event
+    const io = req.app.get("io");
+    io.emit("taskDeleted", task._id);
+
     res.status(200).json({
       message: "Task deleted",
     });
 
   } catch (error) {
-
     res.status(500).json({
       message: error.message,
     });
-
   }
 };

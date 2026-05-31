@@ -38,6 +38,10 @@ import {
   generateAITasks 
 } from "../services/aiService";
 
+import { io } from "socket.io-client";
+
+const socket = io("http://localhost:5000");
+
 function Dashboard() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
@@ -95,6 +99,20 @@ function Dashboard() {
       setLoading(false);
     }
   };
+
+useEffect(() => {
+
+  socket.on("taskCreated", fetchTasks);
+  socket.on("taskUpdated", fetchTasks);
+  socket.on("taskDeleted", fetchTasks);
+
+  return () => {
+    socket.off("taskCreated", fetchTasks);
+    socket.off("taskUpdated", fetchTasks);
+    socket.off("taskDeleted", fetchTasks);
+  };
+
+}, []);
 
   useEffect(() => {
     fetchProjects();

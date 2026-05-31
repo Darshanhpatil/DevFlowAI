@@ -33,6 +33,28 @@ app.get("/", (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+import { createServer } from "http";
+import { Server } from "socket.io";
+
+const httpServer = createServer(app);
+
+const io = new Server(httpServer, {
+  cors: {
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST"],
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log("User Connected:", socket.id);
+
+  socket.on("disconnect", () => {
+    console.log("User Disconnected");
+  });
+});
+
+app.set("io", io);
+
+httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
