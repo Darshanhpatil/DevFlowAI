@@ -35,6 +35,18 @@ import {
 } from "lucide-react";
 
 import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+} from "recharts";
+
+import {
   generateAITasks 
 } from "../services/aiService";
 
@@ -101,17 +113,23 @@ function Dashboard() {
   };
 
 useEffect(() => {
+  socket.on("taskCreated", () => {
+    fetchProjects();
+  });
 
-  socket.on("taskCreated", fetchTasks);
-  socket.on("taskUpdated", fetchTasks);
-  socket.on("taskDeleted", fetchTasks);
+  socket.on("taskUpdated", () => {
+    fetchProjects();
+  });
+
+  socket.on("taskDeleted", () => {
+    fetchProjects();
+  });
 
   return () => {
-    socket.off("taskCreated", fetchTasks);
-    socket.off("taskUpdated", fetchTasks);
-    socket.off("taskDeleted", fetchTasks);
+    socket.off("taskCreated");
+    socket.off("taskUpdated");
+    socket.off("taskDeleted");
   };
-
 }, []);
 
   useEffect(() => {
@@ -150,6 +168,50 @@ useEffect(() => {
       completedTasks,
     };
   }, [projects, tasks]);
+
+  const projectAnalytics = [
+  {
+    name: "Pending",
+    value: projects.filter(
+      (p) => p.status === "Pending"
+    ).length,
+  },
+  {
+    name: "In Progress",
+    value: projects.filter(
+      (p) => p.status === "In Progress"
+    ).length,
+  },
+  {
+    name: "Completed",
+    value: projects.filter(
+      (p) => p.status === "Completed"
+    ).length,
+  },
+]; 
+  
+const allTasks = Object.values(tasks).flat();
+
+const taskAnalytics = [
+  {
+    name: "Pending",
+    value: allTasks.filter(
+      (t) => t.status === "Pending"
+    ).length,
+  },
+  {
+    name: "In Progress",
+    value: allTasks.filter(
+      (t) => t.status === "In Progress"
+    ).length,
+  },
+  {
+    name: "Completed",
+    value: allTasks.filter(
+      (t) => t.status === "Completed"
+    ).length,
+  },
+];
 
   // PROJECT INPUT CHANGE
   const handleChange = (e) => {
@@ -425,6 +487,51 @@ useEffect(() => {
             </div>
           </div>
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">
+
+          {/* PROJECT Chart */}
+
+          <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+            <h3 className="text-xl font-bold mb-3">
+              Project Status Distribution
+            </h3>
+
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={projectAnalytics}
+                  dataKey="value"
+                  outerRadius={100}
+                  lable
+                >
+                  <cell fill="#facc15" />
+                  <cell fill="#3b82f6" />
+                  <cell fill="#22c55e" />
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* TASK Chart */}
+
+          <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+            <h3 className="text-xl font-bold mb-3">
+              Task Status Distribution
+            </h3>
+
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={taskAnalytics}>
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          
+        </div>  
 
         {/* PROJECT FORM */}
         <div className="bg-slate-900/80 backdrop-blur-md p-6 rounded-3xl mb-10 shadow-2xl border border-slate-800">

@@ -5,19 +5,18 @@ export const createTask = async (req, res) => {
   try {
     const { title, description, status, project } = req.body;
 
-    const task = await Task.create({
-      title,
-      description,
-      status,
-      project,
-      user: req.user.id,
-    });
+   const task = await Task.create({
+  title,
+  description,
+  status,
+  project,
+  user: req.user.id,
+});
 
-    // Socket.IO Event
-    const io = req.app.get("io");
-    io.emit("taskCreated", task);
+const io = req.app.get("io");
+io.emit("taskCreated");
 
-    res.status(201).json(task);
+res.status(201).json(task);
 
   } catch (error) {
     res.status(500).json({
@@ -48,7 +47,6 @@ export const getTasks = async (req, res) => {
 // UPDATE TASK
 export const updateTask = async (req, res) => {
   try {
-
     const task = await Task.findById(req.params.id);
 
     if (!task) {
@@ -65,9 +63,9 @@ export const updateTask = async (req, res) => {
       }
     );
 
-    // Socket.IO Event
+    // SOCKET EVENT
     const io = req.app.get("io");
-    io.emit("taskUpdated", updatedTask);
+    io.emit("taskUpdated");
 
     res.status(200).json(updatedTask);
 
@@ -93,13 +91,13 @@ export const deleteTask = async (req, res) => {
 
     await task.deleteOne();
 
-    // Socket.IO Event
     const io = req.app.get("io");
-    io.emit("taskDeleted", task._id);
+    io.emit("taskDeleted");
 
     res.status(200).json({
-      message: "Task deleted",
-    });
+    message: "Task deleted",
+});
+
 
   } catch (error) {
     res.status(500).json({
