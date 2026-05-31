@@ -91,11 +91,11 @@ export const deleteTask = async (req, res) => {
 
     await task.deleteOne();
 
-    const io = req.app.get("io");
-    io.emit("taskDeleted");
+const io = req.app.get("io");
+io.emit("taskDeleted");
 
-    res.status(200).json({
-    message: "Task deleted",
+res.status(200).json({
+  message: "Task deleted",
 });
 
 
