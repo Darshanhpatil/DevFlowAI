@@ -32,6 +32,7 @@ import {
   Clock3,
   Loader2,
   ListTodo,
+  User,
 } from "lucide-react";
 
 import {
@@ -169,6 +170,13 @@ useEffect(() => {
     };
   }, [projects, tasks]);
 
+  const comletationRate =
+    stats.totalTasks > 0
+      ? Math.round(
+          (stats.completedTasks / stats.totalTasks) * 100
+        )
+      : 0;
+
   const projectAnalytics = [
   {
     name: "Pending",
@@ -209,6 +217,34 @@ const taskAnalytics = [
     name: "Completed",
     value: allTasks.filter(
       (t) => t.status === "Completed"
+    ).length,
+  },
+];
+  
+  const overdueTasks = allTasks.filter(
+  (task) =>
+    task.dueDate &&
+    new Date(task.dueDate) < new Date() &&
+    task.status !== "Completed"
+  ).length;
+
+  const priorityAnalytics = [
+  {
+    name: "Low",
+    value: allTasks.filter(
+      (t) => t.priority === "Low"
+    ).length,
+  },
+  {
+    name: "Medium",
+    value: allTasks.filter(
+      (t) => t.priority === "Medium"
+    ).length,
+  },
+  {
+    name: "High",
+    value: allTasks.filter(
+      (t) => t.priority === "High"
     ).length,
   },
 ];
@@ -307,6 +343,8 @@ const taskAnalytics = [
         title: currentTask.title,
         description: currentTask.description,
         status: currentTask.status || "Pending",
+        priority: currentTask.priority || "Medium",
+        dueDate: currentTask.dueDate || null,
         project: projectId,
       });
 
@@ -335,6 +373,8 @@ const taskAnalytics = [
       title: task.title,
       description: task.description,
       status: task.status,
+      priority: task.priority,
+      dueDate: task.dueDate,
     });
   };
 
@@ -344,10 +384,16 @@ const taskAnalytics = [
     projectId
   ) => {
     try {
+      console.log("Updating Task:", taskId, editTaskData);
+
       await updateTask(taskId, editTaskData);
+
       toast.success("Task Updated");
+
       setEditingTask(null);
+
       fetchTasks(projectId);
+
     } catch (error) {
       toast.error("Task Update Failed");
     }
@@ -427,6 +473,7 @@ const taskAnalytics = [
       <div className="max-w-7xl mx-auto">
         {/* TOP BAR */}
         <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mb-10">
+
           <div>
             <h1 className="text-4xl md:text-5xl font-black flex items-center gap-3">
               <FolderKanban className="text-blue-500" size={40} />
@@ -436,6 +483,15 @@ const taskAnalytics = [
               DevFlowAI Dashboard
             </p>
           </div>
+          <div className="flex gap-3">
+            <button
+            onClick={() => navigate("/profile")}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-5 py-3 rounded-xl transition-all font-semibold"
+          >
+            <User size={18} />
+            Profile
+          </button>
+          
           <button
             onClick={handleLogout}
             className="flex items-center gap-2 bg-red-500 hover:bg-red-600 px-5 py-3 rounded-xl transition-all font-semibold"
@@ -443,10 +499,11 @@ const taskAnalytics = [
             <LogOut size={18} />
             Logout
           </button>
+          </div>
         </div>
 
         {/* STATS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-10">
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
             <div className="flex items-center justify-between">
               <div>
@@ -486,6 +543,44 @@ const taskAnalytics = [
               <CheckCircle2 className="text-green-500" size={35} />
             </div>
           </div>
+          <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-400 text-sm">
+                  Overdue Tasks
+                </p>
+                <h2 className="text-3xl font-bold mt-2">
+                  {overdueTasks}
+                </h2>
+              </div>
+              <Clock3 
+                className="text-red-500" 
+                size={35} 
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl mb-10">
+          <div className="flex justify-between mb-2">
+            <h3 className="font-semibol">
+              Task Completion Rate
+            </h3>
+
+            <span className="text-green-400 font-bold">
+              {comletationRate}%
+            </span>  
+          </div>
+
+        <div className="w-full bg-slate-700 rounded-full h-4">
+          <div
+            className="bg-green-500 h-4 rounded-full transition-all duration-500"
+            style={{
+               width: `${comletationRate}%`
+           }}
+          /> 
+          </div>
+          
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">
@@ -496,22 +591,30 @@ const taskAnalytics = [
             <h3 className="text-xl font-bold mb-3">
               Project Status Distribution
             </h3>
-
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
                   data={projectAnalytics}
                   dataKey="value"
-                  outerRadius={100}
-                  lable
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  fill="#8884d8"
+                  label
                 >
-                  <cell fill="#facc15" />
-                  <cell fill="#3b82f6" />
-                  <cell fill="#22c55e" />
+                  {projectAnalytics.map((entry, index) => (
+                    <Cell
+                      key={index}
+                      fill={
+                        ["#facc15", "#3b82f6", "#22c55e"][index]
+                      }
+                    />
+                  ))}
                 </Pie>
                 <Tooltip />
               </PieChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer>            
           </div>
 
           {/* TASK Chart */}
@@ -520,18 +623,49 @@ const taskAnalytics = [
             <h3 className="text-xl font-bold mb-3">
               Task Status Distribution
             </h3>
-
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={taskAnalytics}>
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="value" />
+                <Bar dataKey="value">
+                  {taskAnalytics.map((entry, index) => (
+                    <Cell 
+                      key={index} 
+                      fill={
+                        ["#facc15", "#3b82f6", "#22c55e"][index]
+                      } 
+                    />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
           
-        </div>  
+        </div> 
+
+        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+          <h3 className="text-xl font-bold mb-3">
+            Task Priority Distribution
+          </h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={priorityAnalytics}>
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="value">
+                {priorityAnalytics.map((entry, index) => (
+                  <Cell 
+                    key={index} 
+                    fill={
+                      ["#22c55e", "#eab308", "#ef4444"][index]
+                    } 
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
 
         {/* PROJECT FORM */}
         <div className="bg-slate-900/80 backdrop-blur-md p-6 rounded-3xl mb-10 shadow-2xl border border-slate-800">
@@ -702,6 +836,39 @@ const taskAnalytics = [
                     </button>
                   </div>
 
+                  <select
+                    value={
+                      taskFormData[project._id]?.priority || "Medium"
+                    }
+                    onChange={(e) =>
+                      handleTaskInputChange(
+                        project._id,
+                        "priority",
+                        e.target.value
+                      )
+                    }
+                    className="w-full p-3 rounded-xl bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500 mt-3"
+                  >
+                    <option>Low</option>
+                    <option>Medium</option>
+                    <option>High</option>
+                  </select>
+
+                  <input
+                    type="date"
+                    value={
+                      taskFormData[project._id]?.dueDate || ""
+                    }
+                    onChange={(e) =>
+                      handleTaskInputChange(
+                        project._id,
+                        "dueDate",
+                        e.target.value
+                      )
+                    }
+                    className="w-full p-3 rounded-xl bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500 mt-3"
+                  />
+
                   {/* KANBAN BOARD */}
                   <DragDropContext onDragEnd={handleDragEnd}>
                     <div className="mt-6 grid gap-4">
@@ -813,15 +980,49 @@ const taskAnalytics = [
                                                 Cancel
                                               </button>
                                             </div>
+                                            <select
+                                              value={editTaskData.priority}
+                                              onChange={(e) =>
+                                                setEditTaskData({
+                                                  ...editTaskData,
+                                                  priority: e.target.value,
+                                                })
+                                              }
+                                              className="w-full p-2 rounded-lg bg-slate-800 outline-none mt-2"
+                                            >
+                                              <option>Low</option>
+                                              <option>Medium</option>
+                                              <option>High</option>
+                                            </select>
                                           </div>
                                         ) : (
                                           <>
                                             <h3 className="font-semibold wrap-break-word">
                                               {task.title}
                                             </h3>
+                                            <span
+                                              className={`inline-block mt-2 text-xs px-2 py-1 rounded-full
+                                              ${
+                                                task.priority === "High"
+                                                  ? "bg-red-500 text-white"
+                                                  : task.priority === "Medium"
+                                                  ? "bg-yellow-500 text-black"
+                                                  : "bg-green-500 text-white"
+                                              }`}
+                                            >
+                                              {task.priority}
+                                            </span>
                                             <p className="text-sm text-slate-300 mt-1 wrap-break-word">
                                               {task.description}
                                             </p>
+                                            {task.dueDate && (
+                                              <p className="text-xs text-slate-400 mt-2">
+                                                Due:{" "}
+                                                {new Date(
+                                                  task.dueDate
+                                                  ).toLocaleDateString()}
+                                              </p>
+                                            )}
                                             <div className="flex flex-wrap gap-2 mt-4">
                                               <button
                                                 onClick={() =>
@@ -870,7 +1071,12 @@ const taskAnalytics = [
                   {/* FOOTER */}
                   <div className="flex justify-between items-center mt-6 gap-3">
                     <button
-                      onClick={() => handleGenerateAI(project)}
+                      onClick={() =>
+                        handleGenerateAI(
+                          project._id,
+                          project.title
+                        )
+                      }
                       className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-xl transition-all w-full"
                     >
                       <Plus size={16} />
