@@ -7,7 +7,7 @@ import {
 
 function Sidebar() {
   return (
-    <div className="w-[260px] h-screen bg-slate-900 border-r border-slate-800 p-5">
+    <div className="w-65 h-screen bg-slate-900 border-r border-slate-800 p-5">
 
       <h1 className="text-3xl font-bold text-blue-500 mb-10">
         DevFlow AI

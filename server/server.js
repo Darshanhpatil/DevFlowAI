@@ -11,6 +11,9 @@ import taskRoutes from "./routes/taskRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import path from "path";
+import testRoutes from "./routes/testRoutes.js";
+import "./cron/taskReminder.js";
+import reportRoutes from "./routes/reportRoutes.js";
 
 connectDB();
 
@@ -25,6 +28,10 @@ app.use(express.json());
 app.use("/api/users", userRoutes);
 
 app.use("/uploads", express.static(path.join("uploads")));
+
+app.use("/api/reports", reportRoutes);
+
+app.use("/api/test", testRoutes);
 
 // ROUTES
 app.use("/api/auth", authRoutes);
@@ -71,3 +78,6 @@ app.set("io", io);
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+console.log("EMAIL_USER:", process.env.EMAIL_USER);
+console.log("EMAIL_PASS:", process.env.EMAIL_PASS);

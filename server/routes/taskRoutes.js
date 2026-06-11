@@ -5,9 +5,11 @@ import {
   getTasks,
   updateTask,
   deleteTask,
+  updateTaskFile,
 } from "../controllers/taskController.js";
 
 import { protect } from "../middleware/authMiddleware.js";
+import upload from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
@@ -23,5 +25,13 @@ router.put("/:id", protect, updateTask);
 
 // DELETE TASK
 router.delete("/:id", protect, deleteTask);
+
+// ADD ATTACHMENT
+router.post(
+  "/upload/:id",
+  protect,
+  upload.single("file"),
+  uploadTaskFile
+);
 
 export default router;

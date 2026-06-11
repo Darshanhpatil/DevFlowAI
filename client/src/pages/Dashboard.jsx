@@ -33,6 +33,9 @@ import {
   Loader2,
   ListTodo,
   User,
+  Sun,
+  Moon,
+  Settings,
 } from "lucide-react";
 
 import {
@@ -51,6 +54,13 @@ import {
   generateAITasks 
 } from "../services/aiService";
 
+import {
+  uploadTaskFile,
+} from "../services/taskService";
+
+import { downloadReport }
+from "../services/reportService";
+
 import { io } from "socket.io-client";
 
 const socket = io("http://localhost:5000");
@@ -58,6 +68,19 @@ const socket = io("http://localhost:5000");
 function Dashboard() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
+
+  const [darkMode, setDarkMode] = useState(
+  localStorage.getItem("theme") === "dark"
+);
+
+const toggleTheme = () => {
+  const newTheme = !darkMode;
+  setDarkMode(newTheme);
+  localStorage.setItem(
+    "theme",
+    newTheme ? "dark" : "light"
+  );
+};
 
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -136,6 +159,14 @@ useEffect(() => {
   useEffect(() => {
     fetchProjects();
   }, []);
+
+  useEffect(() => {
+  if (darkMode) {
+    document.documentElement.classList.add("dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+  }
+}, [darkMode]);
 
   // FILTER PROJECTS
   const filteredProjects = projects.filter((project) => {
@@ -413,6 +444,43 @@ const taskAnalytics = [
     }
   };
 
+  const handleFileUpload = async (
+  e,
+  taskId,
+  projectId
+) => {
+  try {
+    const file = e.target.files[0];
+
+    if (!file) return;
+
+    const formData = new FormData();
+
+    formData.append(
+      "file",
+      file
+    );
+
+    await uploadTaskFile(
+      taskId,
+      formData
+    );
+
+    toast.success(
+      "File Uploaded"
+    );
+
+    fetchTasks(projectId);
+
+  } catch (error) {
+    console.log(error);
+
+    toast.error(
+      "Upload Failed"
+    );
+  }
+};
+
   // DRAG & DROP
   const handleDragEnd = async (result) => {
     if (!result.destination) return;
@@ -469,7 +537,11 @@ const taskAnalytics = [
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-black text-white p-4 md:p-8">
+    <div
+      className={`min-h-screen p-4 md:p-8 ${
+        darkMode ? "bg-slate-900 text-white" : "bg-white text-black"
+      }`}
+      >
       <div className="max-w-7xl mx-auto">
         {/* TOP BAR */}
         <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mb-10">
@@ -483,13 +555,37 @@ const taskAnalytics = [
               DevFlowAI Dashboard
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
+            <button
+              onClick={toggleTheme}
+              className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 px-5 py-3 rounded-xl transition-all font-semibold"
+            >
+              {darkMode ? (
+                <>
+                  <Sun size={18} />
+                  Dark Mode
+                </>
+              ) : (
+                <>
+                  <Moon size={18} />
+                  Light Mode
+                </>
+              )}
+            </button>
             <button
             onClick={() => navigate("/profile")}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-5 py-3 rounded-xl transition-all font-semibold"
           >
             <User size={18} />
             Profile
+          </button>
+
+          <button
+            onClick={() => navigate("/settings")}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 px-5 py-3 rounded-xl transition-all font-semibold"
+          >
+            <Settings size={18} />
+            Settings
           </button>
           
           <button
@@ -644,6 +740,22 @@ const taskAnalytics = [
           
         </div> 
 
+        {/* Upload File */}
+
+        <div className="mt-3">
+          <label className="cursor-pointer text-blue-400 text-sm">
+            Upload File
+          </label>
+
+          <input
+            type="file"
+            hidden
+            onChange={(e) =>
+              handleFileUpload(e, "taskId", "projectId")
+            }
+          />
+        </div>
+
         <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
           <h3 className="text-xl font-bold mb-3">
             Task Priority Distribution
@@ -764,6 +876,13 @@ const taskAnalytics = [
                       <h2 className="text-2xl font-bold wrap-break-word">
                         {project.title}
                       </h2>
+                      <button
+                      onClick={() => downloadReport(project._id)}
+                      className="bg-purple-600 px-4 py-2 rounded-xl"
+                      >
+                        📄 Export PDF
+                        
+                      </button>
                       <p className="text-slate-400 mt-2 text-sm wrap-break-word">
                         {project.description}
                       </p>
@@ -997,32 +1116,78 @@ const taskAnalytics = [
                                           </div>
                                         ) : (
                                           <>
-                                            <h3 className="font-semibold wrap-break-word">
-                                              {task.title}
-                                            </h3>
-                                            <span
-                                              className={`inline-block mt-2 text-xs px-2 py-1 rounded-full
-                                              ${
-                                                task.priority === "High"
-                                                  ? "bg-red-500 text-white"
-                                                  : task.priority === "Medium"
-                                                  ? "bg-yellow-500 text-black"
-                                                  : "bg-green-500 text-white"
-                                              }`}
-                                            >
-                                              {task.priority}
-                                            </span>
-                                            <p className="text-sm text-slate-300 mt-1 wrap-break-word">
-                                              {task.description}
-                                            </p>
-                                            {task.dueDate && (
-                                              <p className="text-xs text-slate-400 mt-2">
-                                                Due:{" "}
-                                                {new Date(
-                                                  task.dueDate
-                                                  ).toLocaleDateString()}
-                                              </p>
-                                            )}
+  <h3 className="font-semibold wrap-break-word">
+    {task.title}
+  </h3>
+
+  <span
+    className={`inline-block mt-2 text-xs px-2 py-1 rounded-full
+    ${
+      task.priority === "High"
+        ? "bg-red-500 text-white"
+        : task.priority === "Medium"
+        ? "bg-yellow-500 text-black"
+        : "bg-green-500 text-white"
+    }`}
+  >
+    {task.priority}
+  </span>
+
+  <p className="text-sm text-slate-300 mt-1 wrap-break-word">
+    {task.description}
+  </p>
+
+  {/* FILE UPLOAD */}
+  <div className="mt-3">
+    <label className="cursor-pointer text-blue-400 text-sm">
+      📎 Upload Attachment
+
+      <input
+        type="file"
+        hidden
+        onChange={(e) =>
+          handleFileUpload(
+            e,
+            task._id,
+            project._id
+          )
+        }
+      />
+    </label>
+  </div>
+
+  {/* ATTACHMENTS */}
+{task.attachments?.length > 0 && (
+  <div className="mt-2 space-y-2">
+    {task.attachments.map((file, index) => (
+      <div key={index}>
+        <img
+          src={file.url}
+          alt={file.filename}
+          className="w-full h-32 object-cover rounded-lg mb-1"
+        />
+
+        <a
+          href={file.url}
+          target="_blank"
+          rel="noreferrer"
+          className="block text-xs text-green-400 hover:underline"
+        >
+          📄 {file.filename}
+        </a>
+      </div>
+    ))}
+  </div>
+)}
+
+  {task.dueDate && (
+    <p className="text-xs text-slate-400 mt-2">
+      Due:{" "}
+      {new Date(
+        task.dueDate
+      ).toLocaleDateString()}
+    </p>
+  )}
                                             <div className="flex flex-wrap gap-2 mt-4">
                                               <button
                                                 onClick={() =>

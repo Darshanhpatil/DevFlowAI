@@ -23,13 +23,11 @@ export const createTask = async (req, res) => {
       user: req.user.id,
     });
 
-    // Activity Log
     await Activity.create({
       action: `Added task "${task.title}"`,
       user: req.user.id,
     });
 
-    // Socket Event
     const io = req.app.get("io");
     io.emit("taskCreated");
 
@@ -42,11 +40,9 @@ export const createTask = async (req, res) => {
   }
 };
 
-
 // GET TASKS
 export const getTasks = async (req, res) => {
   try {
-
     const tasks = await Task.find({
       project: req.params.projectId,
       user: req.user.id,
@@ -63,11 +59,9 @@ export const getTasks = async (req, res) => {
   }
 };
 
-
 // UPDATE TASK
 export const updateTask = async (req, res) => {
   try {
-
     const task = await Task.findById(
       req.params.id
     );
@@ -78,7 +72,6 @@ export const updateTask = async (req, res) => {
       });
     }
 
-    // Ownership Check
     if (
       task.user.toString() !==
       req.user.id
@@ -97,13 +90,11 @@ export const updateTask = async (req, res) => {
         }
       );
 
-    // Activity Log
     await Activity.create({
       action: `Updated task "${updatedTask.title}"`,
       user: req.user.id,
     });
 
-    // Socket Event
     const io = req.app.get("io");
     io.emit("taskUpdated");
 
@@ -118,11 +109,9 @@ export const updateTask = async (req, res) => {
   }
 };
 
-
 // DELETE TASK
 export const deleteTask = async (req, res) => {
   try {
-
     const task = await Task.findById(
       req.params.id
     );
@@ -133,7 +122,6 @@ export const deleteTask = async (req, res) => {
       });
     }
 
-    // Ownership Check
     if (
       task.user.toString() !==
       req.user.id
@@ -143,7 +131,6 @@ export const deleteTask = async (req, res) => {
       });
     }
 
-    // Activity Log
     await Activity.create({
       action: `Deleted task "${task.title}"`,
       user: req.user.id,
@@ -156,6 +143,63 @@ export const deleteTask = async (req, res) => {
 
     res.status(200).json({
       message: "Task deleted",
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+// UPLOAD TASK FILE
+export const uploadTaskFile = async (
+  req,
+  res
+) => {
+  try {
+    const task = await Task.findById(
+      req.params.id
+    );
+
+    if (!task) {
+      return res.status(404).json({
+        message: "Task not found",
+      });
+    }
+
+    if (
+      task.user.toString() !==
+      req.user.id
+    ) {
+      return res.status(403).json({
+        message: "Unauthorized",
+      });
+    }
+
+    const fileUrl =
+      `http://localhost:5000/uploads/${req.file.filename}`;
+
+    if (!task.attachments) {
+      task.attachments = [];
+    }
+
+    task.attachments.push({
+  filename: req.file.originalname,
+  url: fileUrl,
+});
+
+    await task.save();
+
+    await Activity.create({
+      action: `Added attachment to task "${task.title}"`,
+      user: req.user.id,
+    });
+
+    res.status(200).json({
+      message: "Attachment added",
+      url: fileUrl,
+      task,
     });
 
   } catch (error) {

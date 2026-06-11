@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
+import Settings from "./pages/Settings";
 
 function App() {
 
@@ -51,6 +52,17 @@ function App() {
             <ProtectedRoute>
 
               <Profile />
+
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+
+              <Settings />
 
             </ProtectedRoute>
           }

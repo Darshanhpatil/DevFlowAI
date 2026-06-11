@@ -74,3 +74,26 @@ export const updateTask = async (
 
   return data;
 };
+
+// UPLOAD TASK FILE
+
+export const uploadTaskFile = async (
+  taskId,
+  formData
+) => {
+  const token =
+    localStorage.getItem("token");
+
+  const response = await fetch(
+    `http://localhost:5000/api/tasks/upload/${taskId}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    }
+  );
+
+  return await response.json();
+};

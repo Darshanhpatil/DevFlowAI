@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
+import sendEmail from "../utils/sendEmail.js";
 
 // GET PROFILE
 export const getProfile = async (req, res) => {
