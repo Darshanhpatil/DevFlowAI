@@ -5,7 +5,7 @@ import {
   getTasks,
   updateTask,
   deleteTask,
-  updateTaskFile,
+  uploadTaskFile,
 } from "../controllers/taskController.js";
 
 import { protect } from "../middleware/authMiddleware.js";

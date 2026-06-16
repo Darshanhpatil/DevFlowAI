@@ -1,30 +1,36 @@
 import mongoose from "mongoose";
 
 const projectSchema = new mongoose.Schema(
-  {
-    title: {
-      type: String,
-      required: true,
-    },
+{
+  title: {
+    type: String,
+    required: true,
+  },
 
-    description: {
-      type: String,
-    },
+  description: String,
 
-    status: {
-      type: String,
-      enum: ["Pending", "In Progress", "Completed"],
-      default: "Pending",
-    },
+  status: {
+    type: String,
+    enum: ["Pending", "In Progress", "Completed"],
+    default: "Pending",
+  },
 
-    user: {
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+
+  members: [
+    {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
-  },
-  {
-    timestamps: true,
-  }
+  ],
+},
+{
+  timestamps: true,
+}
 );
 
 const Project = mongoose.model("Project", projectSchema);

@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import {
-  DragDropContext,
-  Droppable,
-  Draggable,
-} from "@hello-pangea/dnd";
+import axios from "axios";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 import {
   getProjects,
@@ -50,16 +47,11 @@ import {
   YAxis,
 } from "recharts";
 
-import {
-  generateAITasks 
-} from "../services/aiService";
+import { generateAITasks } from "../services/aiService";
 
-import {
-  uploadTaskFile,
-} from "../services/taskService";
+import { uploadTaskFile } from "../services/taskService";
 
-import { downloadReport }
-from "../services/reportService";
+import { downloadReport } from "../services/reportService";
 
 import { io } from "socket.io-client";
 
@@ -70,17 +62,14 @@ function Dashboard() {
   const user = JSON.parse(localStorage.getItem("user"));
 
   const [darkMode, setDarkMode] = useState(
-  localStorage.getItem("theme") === "dark"
-);
-
-const toggleTheme = () => {
-  const newTheme = !darkMode;
-  setDarkMode(newTheme);
-  localStorage.setItem(
-    "theme",
-    newTheme ? "dark" : "light"
+    localStorage.getItem("theme") === "dark",
   );
-};
+
+  const toggleTheme = () => {
+    const newTheme = !darkMode;
+    setDarkMode(newTheme);
+    localStorage.setItem("theme", newTheme ? "dark" : "light");
+  };
 
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -90,6 +79,8 @@ const toggleTheme = () => {
 
   const [tasks, setTasks] = useState({});
   const [editingTask, setEditingTask] = useState(null);
+  const [memberEmail, setMemberEmail] = useState("");
+  const [assignedUser, setAssignedUser] = useState("");
   const [editTaskData, setEditTaskData] = useState({
     title: "",
     description: "",
@@ -116,6 +107,11 @@ const toggleTheme = () => {
       }));
     } catch (error) {
       console.log(error);
+      alert(
+        error.response?.data?.message ||
+          error.message ||
+          "Something went wrong",
+      );
     }
   };
 
@@ -136,48 +132,45 @@ const toggleTheme = () => {
     }
   };
 
-useEffect(() => {
-  socket.on("taskCreated", () => {
-    fetchProjects();
-  });
+  useEffect(() => {
+    socket.on("taskCreated", () => {
+      fetchProjects();
+    });
 
-  socket.on("taskUpdated", () => {
-    fetchProjects();
-  });
+    socket.on("taskUpdated", () => {
+      fetchProjects();
+    });
 
-  socket.on("taskDeleted", () => {
-    fetchProjects();
-  });
+    socket.on("taskDeleted", () => {
+      fetchProjects();
+    });
 
-  return () => {
-    socket.off("taskCreated");
-    socket.off("taskUpdated");
-    socket.off("taskDeleted");
-  };
-}, []);
+    return () => {
+      socket.off("taskCreated");
+      socket.off("taskUpdated");
+      socket.off("taskDeleted");
+    };
+  }, []);
 
   useEffect(() => {
     fetchProjects();
   }, []);
 
   useEffect(() => {
-  if (darkMode) {
-    document.documentElement.classList.add("dark");
-  } else {
-    document.documentElement.classList.remove("dark");
-  }
-}, [darkMode]);
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [darkMode]);
 
   // FILTER PROJECTS
   const filteredProjects = projects.filter((project) => {
-    const matchesSearch =
-      project.title
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
+    const matchesSearch = project.title
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
     const matchesFilter =
-      filterStatus === "All"
-        ? true
-        : project.status === filterStatus;
+      filterStatus === "All" ? true : project.status === filterStatus;
 
     return matchesSearch && matchesFilter;
   });
@@ -190,7 +183,7 @@ useEffect(() => {
     Object.values(tasks).forEach((projectTasks) => {
       totalTasks += projectTasks.length;
       completedTasks += projectTasks.filter(
-        (task) => task.status === "Completed"
+        (task) => task.status === "Completed",
       ).length;
     });
 
@@ -203,82 +196,62 @@ useEffect(() => {
 
   const comletationRate =
     stats.totalTasks > 0
-      ? Math.round(
-          (stats.completedTasks / stats.totalTasks) * 100
-        )
+      ? Math.round((stats.completedTasks / stats.totalTasks) * 100)
       : 0;
 
   const projectAnalytics = [
-  {
-    name: "Pending",
-    value: projects.filter(
-      (p) => p.status === "Pending"
-    ).length,
-  },
-  {
-    name: "In Progress",
-    value: projects.filter(
-      (p) => p.status === "In Progress"
-    ).length,
-  },
-  {
-    name: "Completed",
-    value: projects.filter(
-      (p) => p.status === "Completed"
-    ).length,
-  },
-]; 
-  
-const allTasks = Object.values(tasks).flat();
+    {
+      name: "Pending",
+      value: projects.filter((p) => p.status === "Pending").length,
+    },
+    {
+      name: "In Progress",
+      value: projects.filter((p) => p.status === "In Progress").length,
+    },
+    {
+      name: "Completed",
+      value: projects.filter((p) => p.status === "Completed").length,
+    },
+  ];
 
-const taskAnalytics = [
-  {
-    name: "Pending",
-    value: allTasks.filter(
-      (t) => t.status === "Pending"
-    ).length,
-  },
-  {
-    name: "In Progress",
-    value: allTasks.filter(
-      (t) => t.status === "In Progress"
-    ).length,
-  },
-  {
-    name: "Completed",
-    value: allTasks.filter(
-      (t) => t.status === "Completed"
-    ).length,
-  },
-];
-  
+  const allTasks = Object.values(tasks).flat();
+
+  const taskAnalytics = [
+    {
+      name: "Pending",
+      value: allTasks.filter((t) => t.status === "Pending").length,
+    },
+    {
+      name: "In Progress",
+      value: allTasks.filter((t) => t.status === "In Progress").length,
+    },
+    {
+      name: "Completed",
+      value: allTasks.filter((t) => t.status === "Completed").length,
+    },
+  ];
+
   const overdueTasks = allTasks.filter(
-  (task) =>
-    task.dueDate &&
-    new Date(task.dueDate) < new Date() &&
-    task.status !== "Completed"
+    (task) =>
+      task.dueDate &&
+      new Date(task.dueDate) < new Date() &&
+      task.status !== "Completed",
   ).length;
 
   const priorityAnalytics = [
-  {
-    name: "Low",
-    value: allTasks.filter(
-      (t) => t.priority === "Low"
-    ).length,
-  },
-  {
-    name: "Medium",
-    value: allTasks.filter(
-      (t) => t.priority === "Medium"
-    ).length,
-  },
-  {
-    name: "High",
-    value: allTasks.filter(
-      (t) => t.priority === "High"
-    ).length,
-  },
-];
+    {
+      name: "Low",
+      value: allTasks.filter((t) => t.priority === "Low").length,
+    },
+    {
+      name: "Medium",
+      value: allTasks.filter((t) => t.priority === "Medium").length,
+    },
+    {
+      name: "High",
+      value: allTasks.filter((t) => t.priority === "High").length,
+    },
+  ];
 
   // PROJECT INPUT CHANGE
   const handleChange = (e) => {
@@ -315,7 +288,7 @@ const taskAnalytics = [
   // DELETE PROJECT
   const handleDelete = async (id) => {
     const confirmDelete = window.confirm(
-      "Are you sure you want to delete this project?"
+      "Are you sure you want to delete this project?",
     );
     if (!confirmDelete) return;
 
@@ -344,11 +317,7 @@ const taskAnalytics = [
   };
 
   // TASK INPUT CHANGE
-  const handleTaskInputChange = (
-    projectId,
-    field,
-    value
-  ) => {
+  const handleTaskInputChange = (projectId, field, value) => {
     setTaskFormData((prev) => ({
       ...prev,
       [projectId]: {
@@ -363,10 +332,7 @@ const taskAnalytics = [
     try {
       const currentTask = taskFormData[projectId];
 
-      if (
-        !currentTask?.title ||
-        !currentTask?.description
-      ) {
+      if (!currentTask?.title || !currentTask?.description) {
         return toast.error("Please fill all task fields");
       }
 
@@ -410,10 +376,7 @@ const taskAnalytics = [
   };
 
   // UPDATE TASK
-  const handleTaskUpdate = async (
-    taskId,
-    projectId
-  ) => {
+  const handleTaskUpdate = async (taskId, projectId) => {
     try {
       console.log("Updating Task:", taskId, editTaskData);
 
@@ -424,17 +387,13 @@ const taskAnalytics = [
       setEditingTask(null);
 
       fetchTasks(projectId);
-
     } catch (error) {
       toast.error("Task Update Failed");
     }
   };
 
   // DELETE TASK
-  const handleTaskDelete = async (
-    taskId,
-    projectId
-  ) => {
+  const handleTaskDelete = async (taskId, projectId) => {
     try {
       await deleteTask(taskId);
       toast.success("Task Deleted");
@@ -444,42 +403,27 @@ const taskAnalytics = [
     }
   };
 
-  const handleFileUpload = async (
-  e,
-  taskId,
-  projectId
-) => {
-  try {
-    const file = e.target.files[0];
+  const handleFileUpload = async (e, taskId, projectId) => {
+    try {
+      const file = e.target.files[0];
 
-    if (!file) return;
+      if (!file) return;
 
-    const formData = new FormData();
+      const formData = new FormData();
 
-    formData.append(
-      "file",
-      file
-    );
+      formData.append("file", file);
 
-    await uploadTaskFile(
-      taskId,
-      formData
-    );
+      await uploadTaskFile(taskId, formData);
 
-    toast.success(
-      "File Uploaded"
-    );
+      toast.success("File Uploaded");
 
-    fetchTasks(projectId);
+      fetchTasks(projectId);
+    } catch (error) {
+      console.log(error);
 
-  } catch (error) {
-    console.log(error);
-
-    toast.error(
-      "Upload Failed"
-    );
-  }
-};
+      toast.error("Upload Failed");
+    }
+  };
 
   // DRAG & DROP
   const handleDragEnd = async (result) => {
@@ -498,36 +442,32 @@ const taskAnalytics = [
       toast.error("Drag update failed");
     }
   };
-  
+
   // GENERATE AI TASKs
   const handleGenerateAI = async (projectId, projectTitle) => {
-  try {
+    try {
+      const data = await generateAITasks(projectTitle);
 
-    const data = await generateAITasks(projectTitle);
+      const aiTasks = data.tasks;
 
-    const aiTasks = data.tasks;
+      for (const task of aiTasks) {
+        await createTask({
+          title: task.title,
+          description: task.description,
+          status: task.status,
+          project: projectId,
+        });
+      }
 
-    for (const task of aiTasks) {
-      await createTask({
-        title: task.title,
-        description: task.description,
-        status: task.status,
-        project: projectId,
-      });
+      toast.success("AI Tasks Generated");
+
+      fetchTasks(projectId);
+    } catch (error) {
+      console.log(error);
+
+      toast.error("AI Generation Failed");
     }
-
-    toast.success("AI Tasks Generated");
-
-    fetchTasks(projectId);
-
-  } catch (error) {
-
-    console.log(error);
-
-    toast.error("AI Generation Failed");
-
-  }
-};
+  };
 
   // LOGOUT
   const handleLogout = () => {
@@ -536,24 +476,44 @@ const taskAnalytics = [
     navigate("/login");
   };
 
+  const handleAddMember = async (projectId, email) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      await axios.post(
+        `http://localhost:5000/api/projects/${projectId}/member`,
+        { email },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      alert("Member Added");
+
+      fetchProjects();
+    } catch (error) {
+      console.log(error);
+      alert(error.response?.data?.message);
+    }
+  };
+
   return (
     <div
       className={`min-h-screen p-4 md:p-8 ${
         darkMode ? "bg-slate-900 text-white" : "bg-white text-black"
       }`}
-      >
+    >
       <div className="max-w-7xl mx-auto">
         {/* TOP BAR */}
         <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mb-10">
-
           <div>
             <h1 className="text-4xl md:text-5xl font-black flex items-center gap-3">
               <FolderKanban className="text-blue-500" size={40} />
               Welcome {user?.name}
             </h1>
-            <p className="text-slate-400 mt-3 text-lg">
-              DevFlowAI Dashboard
-            </p>
+            <p className="text-slate-400 mt-3 text-lg">DevFlowAI Dashboard</p>
           </div>
           <div className="flex gap-3 flex-wrap">
             <button
@@ -573,28 +533,28 @@ const taskAnalytics = [
               )}
             </button>
             <button
-            onClick={() => navigate("/profile")}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-5 py-3 rounded-xl transition-all font-semibold"
-          >
-            <User size={18} />
-            Profile
-          </button>
+              onClick={() => navigate("/profile")}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-5 py-3 rounded-xl transition-all font-semibold"
+            >
+              <User size={18} />
+              Profile
+            </button>
 
-          <button
-            onClick={() => navigate("/settings")}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 px-5 py-3 rounded-xl transition-all font-semibold"
-          >
-            <Settings size={18} />
-            Settings
-          </button>
-          
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 bg-red-500 hover:bg-red-600 px-5 py-3 rounded-xl transition-all font-semibold"
-          >
-            <LogOut size={18} />
-            Logout
-          </button>
+            <button
+              onClick={() => navigate("/settings")}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 px-5 py-3 rounded-xl transition-all font-semibold"
+            >
+              <Settings size={18} />
+              Settings
+            </button>
+
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 bg-red-500 hover:bg-red-600 px-5 py-3 rounded-xl transition-all font-semibold"
+            >
+              <LogOut size={18} />
+              Logout
+            </button>
           </div>
         </div>
 
@@ -603,9 +563,7 @@ const taskAnalytics = [
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm">
-                  Total Projects
-                </p>
+                <p className="text-slate-400 text-sm">Total Projects</p>
                 <h2 className="text-3xl font-bold mt-2">
                   {stats.totalProjects}
                 </h2>
@@ -616,12 +574,8 @@ const taskAnalytics = [
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm">
-                  Total Tasks
-                </p>
-                <h2 className="text-3xl font-bold mt-2">
-                  {stats.totalTasks}
-                </h2>
+                <p className="text-slate-400 text-sm">Total Tasks</p>
+                <h2 className="text-3xl font-bold mt-2">{stats.totalTasks}</h2>
               </div>
               <ListTodo className="text-yellow-400" size={35} />
             </div>
@@ -629,9 +583,7 @@ const taskAnalytics = [
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm">
-                  Completed Tasks
-                </p>
+                <p className="text-slate-400 text-sm">Completed Tasks</p>
                 <h2 className="text-3xl font-bold mt-2">
                   {stats.completedTasks}
                 </h2>
@@ -642,45 +594,32 @@ const taskAnalytics = [
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm">
-                  Overdue Tasks
-                </p>
-                <h2 className="text-3xl font-bold mt-2">
-                  {overdueTasks}
-                </h2>
+                <p className="text-slate-400 text-sm">Overdue Tasks</p>
+                <h2 className="text-3xl font-bold mt-2">{overdueTasks}</h2>
               </div>
-              <Clock3 
-                className="text-red-500" 
-                size={35} 
-              />
+              <Clock3 className="text-red-500" size={35} />
             </div>
           </div>
         </div>
 
         <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl mb-10">
           <div className="flex justify-between mb-2">
-            <h3 className="font-semibol">
-              Task Completion Rate
-            </h3>
+            <h3 className="font-semibol">Task Completion Rate</h3>
 
-            <span className="text-green-400 font-bold">
-              {comletationRate}%
-            </span>  
+            <span className="text-green-400 font-bold">{comletationRate}%</span>
           </div>
 
-        <div className="w-full bg-slate-700 rounded-full h-4">
-          <div
-            className="bg-green-500 h-4 rounded-full transition-all duration-500"
-            style={{
-               width: `${comletationRate}%`
-           }}
-          /> 
+          <div className="w-full bg-slate-700 rounded-full h-4">
+            <div
+              className="bg-green-500 h-4 rounded-full transition-all duration-500"
+              style={{
+                width: `${comletationRate}%`,
+              }}
+            />
           </div>
-          
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">
-
           {/* PROJECT Chart */}
 
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
@@ -702,23 +641,19 @@ const taskAnalytics = [
                   {projectAnalytics.map((entry, index) => (
                     <Cell
                       key={index}
-                      fill={
-                        ["#facc15", "#3b82f6", "#22c55e"][index]
-                      }
+                      fill={["#facc15", "#3b82f6", "#22c55e"][index]}
                     />
                   ))}
                 </Pie>
                 <Tooltip />
               </PieChart>
-            </ResponsiveContainer>            
+            </ResponsiveContainer>
           </div>
 
           {/* TASK Chart */}
 
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-            <h3 className="text-xl font-bold mb-3">
-              Task Status Distribution
-            </h3>
+            <h3 className="text-xl font-bold mb-3">Task Status Distribution</h3>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={taskAnalytics}>
                 <XAxis dataKey="name" />
@@ -726,19 +661,16 @@ const taskAnalytics = [
                 <Tooltip />
                 <Bar dataKey="value">
                   {taskAnalytics.map((entry, index) => (
-                    <Cell 
-                      key={index} 
-                      fill={
-                        ["#facc15", "#3b82f6", "#22c55e"][index]
-                      } 
+                    <Cell
+                      key={index}
+                      fill={["#facc15", "#3b82f6", "#22c55e"][index]}
                     />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
-          
-        </div> 
+        </div>
 
         {/* Upload File */}
 
@@ -750,16 +682,12 @@ const taskAnalytics = [
           <input
             type="file"
             hidden
-            onChange={(e) =>
-              handleFileUpload(e, "taskId", "projectId")
-            }
+            onChange={(e) => handleFileUpload(e, "taskId", "projectId")}
           />
         </div>
 
         <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-          <h3 className="text-xl font-bold mb-3">
-            Task Priority Distribution
-          </h3>
+          <h3 className="text-xl font-bold mb-3">Task Priority Distribution</h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={priorityAnalytics}>
               <XAxis dataKey="name" />
@@ -767,11 +695,9 @@ const taskAnalytics = [
               <Tooltip />
               <Bar dataKey="value">
                 {priorityAnalytics.map((entry, index) => (
-                  <Cell 
-                    key={index} 
-                    fill={
-                      ["#22c55e", "#eab308", "#ef4444"][index]
-                    } 
+                  <Cell
+                    key={index}
+                    fill={["#22c55e", "#eab308", "#ef4444"][index]}
                   />
                 ))}
               </Bar>
@@ -784,10 +710,7 @@ const taskAnalytics = [
           <h2 className="text-2xl font-bold mb-5">
             {editId ? "Update Project" : "Create Project"}
           </h2>
-          <form
-            onSubmit={handleSubmit}
-            className="grid md:grid-cols-3 gap-4"
-          >
+          <form onSubmit={handleSubmit} className="grid md:grid-cols-3 gap-4">
             <input
               type="text"
               name="title"
@@ -816,9 +739,7 @@ const taskAnalytics = [
               <option>In Progress</option>
               <option>Completed</option>
             </select>
-            <button
-              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 transition-all py-3 rounded-xl col-span-1 md:col-span-3 font-semibold"
-            >
+            <button className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 transition-all py-3 rounded-xl col-span-1 md:col-span-3 font-semibold">
               <Plus size={18} />
               {editId ? "Update Project" : "Create Project"}
             </button>
@@ -855,13 +776,8 @@ const taskAnalytics = [
         {/* LOADING */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24">
-            <Loader2
-              className="animate-spin text-blue-500"
-              size={50}
-            />
-            <p className="text-slate-400 mt-4 text-xl">
-              Loading Projects...
-            </p>
+            <Loader2 className="animate-spin text-blue-500" size={50} />
+            <p className="text-slate-400 mt-4 text-xl">Loading Projects...</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -877,12 +793,42 @@ const taskAnalytics = [
                         {project.title}
                       </h2>
                       <button
-                      onClick={() => downloadReport(project._id)}
-                      className="bg-purple-600 px-4 py-2 rounded-xl"
+                        onClick={() => downloadReport(project._id)}
+                        className="bg-purple-600 px-4 py-2 rounded-xl"
                       >
                         📄 Export PDF
-                        
                       </button>
+                      <input
+                        type="email"
+                        placeholder="Member email"
+                        className="w-full p-2 rounded bg-slate-800 mt-2"
+                        value={project.memberEmail || ""}
+                        onChange={(e) => {
+                          setProjects((prev) =>
+                            prev.map((p) =>
+                              p._id === project._id
+                                ? { ...p, memberEmail: e.target.value }
+                                : p,
+                            ),
+                          );
+                        }}
+                      />
+
+                      <button
+                        onClick={() =>
+                          handleAddMember(project._id, project.memberEmail)
+                        }
+                        className="bg-blue-600 px-3 py-2 rounded mt-2"
+                      >
+                        Add Member
+                      </button>
+                      <div className="mt-3">
+                        <h4 className="font-semibold">Team Members</h4>
+
+                        {project.members?.map((member) => (
+                          <div key={member._id}>👤 {member.name}</div>
+                        ))}
+                      </div>
                       <p className="text-slate-400 mt-2 text-sm wrap-break-word">
                         {project.description}
                       </p>
@@ -893,8 +839,8 @@ const taskAnalytics = [
                         project.status === "Completed"
                           ? "bg-green-600"
                           : project.status === "In Progress"
-                          ? "bg-blue-600"
-                          : "bg-yellow-500 text-black"
+                            ? "bg-blue-600"
+                            : "bg-yellow-500 text-black"
                       }`}
                     >
                       {project.status}
@@ -911,7 +857,7 @@ const taskAnalytics = [
                         handleTaskInputChange(
                           project._id,
                           "title",
-                          e.target.value
+                          e.target.value,
                         )
                       }
                       className="w-full p-3 rounded-xl bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
@@ -924,20 +870,18 @@ const taskAnalytics = [
                         handleTaskInputChange(
                           project._id,
                           "description",
-                          e.target.value
+                          e.target.value,
                         )
                       }
                       className="w-full p-3 rounded-xl bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <select
-                      value={
-                        taskFormData[project._id]?.status || "Pending"
-                      }
+                      value={taskFormData[project._id]?.status || "Pending"}
                       onChange={(e) =>
                         handleTaskInputChange(
                           project._id,
                           "status",
-                          e.target.value
+                          e.target.value,
                         )
                       }
                       className="w-full p-3 rounded-xl bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
@@ -946,6 +890,21 @@ const taskAnalytics = [
                       <option>In Progress</option>
                       <option>Completed</option>
                     </select>
+
+                    <select
+                      value={assignedUser}
+                      onChange={(e) => setAssignedUser(e.target.value)}
+                      className="w-full p-3 rounded-xl bg-slate-800"
+                    >
+                      <option value="">Assign Member</option>
+
+                      {project.members?.map((member) => (
+                        <option key={member._id} value={member._id}>
+                          {member.name}
+                        </option>
+                      ))}
+                    </select>
+
                     <button
                       onClick={() => handleTaskCreate(project._id)}
                       className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 w-full py-3 rounded-xl transition-all font-semibold"
@@ -956,14 +915,12 @@ const taskAnalytics = [
                   </div>
 
                   <select
-                    value={
-                      taskFormData[project._id]?.priority || "Medium"
-                    }
+                    value={taskFormData[project._id]?.priority || "Medium"}
                     onChange={(e) =>
                       handleTaskInputChange(
                         project._id,
                         "priority",
-                        e.target.value
+                        e.target.value,
                       )
                     }
                     className="w-full p-3 rounded-xl bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500 mt-3"
@@ -975,14 +932,12 @@ const taskAnalytics = [
 
                   <input
                     type="date"
-                    value={
-                      taskFormData[project._id]?.dueDate || ""
-                    }
+                    value={taskFormData[project._id]?.dueDate || ""}
                     onChange={(e) =>
                       handleTaskInputChange(
                         project._id,
                         "dueDate",
-                        e.target.value
+                        e.target.value,
                       )
                     }
                     className="w-full p-3 rounded-xl bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500 mt-3"
@@ -992,10 +947,7 @@ const taskAnalytics = [
                   <DragDropContext onDragEnd={handleDragEnd}>
                     <div className="mt-6 grid gap-4">
                       {["Pending", "In Progress", "Completed"].map((status) => (
-                        <Droppable
-                          droppableId={status}
-                          key={status}
-                        >
+                        <Droppable droppableId={status} key={status}>
                           {(provided) => (
                             <div
                               ref={provided.innerRef}
@@ -1008,13 +960,11 @@ const taskAnalytics = [
                                   status === "Pending"
                                     ? "text-yellow-400"
                                     : status === "In Progress"
-                                    ? "text-blue-400"
-                                    : "text-green-400"
+                                      ? "text-blue-400"
+                                      : "text-green-400"
                                 }`}
                               >
-                                {status === "Pending" && (
-                                  <Clock3 size={18} />
-                                )}
+                                {status === "Pending" && <Clock3 size={18} />}
                                 {status === "In Progress" && (
                                   <Loader2 size={18} />
                                 )}
@@ -1024,9 +974,7 @@ const taskAnalytics = [
                                 {status}
                               </h3>
                               {tasks[project._id]
-                                ?.filter((task) =>
-                                  task.status === status
-                                )
+                                ?.filter((task) => task.status === status)
                                 .map((task, index) => (
                                   <Draggable
                                     key={task._id}
@@ -1083,7 +1031,7 @@ const taskAnalytics = [
                                                 onClick={() =>
                                                   handleTaskUpdate(
                                                     task._id,
-                                                    project._id
+                                                    project._id,
                                                   )
                                                 }
                                                 className="bg-green-600 hover:bg-green-700 px-3 py-2 rounded-lg text-sm"
@@ -1116,78 +1064,79 @@ const taskAnalytics = [
                                           </div>
                                         ) : (
                                           <>
-  <h3 className="font-semibold wrap-break-word">
-    {task.title}
-  </h3>
+                                            <h3 className="font-semibold wrap-break-word">
+                                              {task.title}
+                                            </h3>
 
-  <span
-    className={`inline-block mt-2 text-xs px-2 py-1 rounded-full
-    ${
-      task.priority === "High"
-        ? "bg-red-500 text-white"
-        : task.priority === "Medium"
-        ? "bg-yellow-500 text-black"
-        : "bg-green-500 text-white"
-    }`}
-  >
-    {task.priority}
-  </span>
+                                            <span
+                                              className={`inline-block mt-2 text-xs px-2 py-1 rounded-full
+                                                ${
+                                                  task.priority === "High"
+                                                   ? "bg-red-500 text-white"
+                                                    : task.priority === "Medium"
+                                                     ? "bg-yellow-500 text-black"
+                                                      : "bg-green-500 text-white"
+                                                      }`}
+                                            >
+                                              {task.priority}
+                                            </span>
 
-  <p className="text-sm text-slate-300 mt-1 wrap-break-word">
-    {task.description}
-  </p>
+                                            <p className="text-sm text-slate-300 mt-1 wrap-break-word">
+                                              {task.description}
+                                            </p>
 
-  {/* FILE UPLOAD */}
-  <div className="mt-3">
-    <label className="cursor-pointer text-blue-400 text-sm">
-      📎 Upload Attachment
+                                            {/* FILE UPLOAD */}
+                                            <div className="mt-3">
+                                              <label className="cursor-pointer text-blue-400 text-sm">
+                                                📎 Upload Attachment
+                                                <input
+                                                  type="file"
+                                                  hidden
+                                                  onChange={(e) =>
+                                                    handleFileUpload(
+                                                      e,
+                                                      task._id,
+                                                      project._id,
+                                                    )
+                                                  }
+                                                />
+                                              </label>
+                                            </div>
 
-      <input
-        type="file"
-        hidden
-        onChange={(e) =>
-          handleFileUpload(
-            e,
-            task._id,
-            project._id
-          )
-        }
-      />
-    </label>
-  </div>
+                                            {/* ATTACHMENTS */}
+                                            {task.attachments?.length > 0 && (
+                                              <div className="mt-2 space-y-2">
+                                                {task.attachments.map(
+                                                  (file, index) => (
+                                                    <div key={index}>
+                                                      <img
+                                                        src={file.url}
+                                                        alt={file.filename}
+                                                        className="w-full h-32 object-cover rounded-lg mb-1"
+                                                      />
 
-  {/* ATTACHMENTS */}
-{task.attachments?.length > 0 && (
-  <div className="mt-2 space-y-2">
-    {task.attachments.map((file, index) => (
-      <div key={index}>
-        <img
-          src={file.url}
-          alt={file.filename}
-          className="w-full h-32 object-cover rounded-lg mb-1"
-        />
+                                                      <a
+                                                        href={file.url}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="block text-xs text-green-400 hover:underline"
+                                                      >
+                                                        📄 {file.filename}
+                                                      </a>
+                                                    </div>
+                                                  ),
+                                                )}
+                                              </div>
+                                            )}
 
-        <a
-          href={file.url}
-          target="_blank"
-          rel="noreferrer"
-          className="block text-xs text-green-400 hover:underline"
-        >
-          📄 {file.filename}
-        </a>
-      </div>
-    ))}
-  </div>
-)}
-
-  {task.dueDate && (
-    <p className="text-xs text-slate-400 mt-2">
-      Due:{" "}
-      {new Date(
-        task.dueDate
-      ).toLocaleDateString()}
-    </p>
-  )}
+                                            {task.dueDate && (
+                                              <p className="text-xs text-slate-400 mt-2">
+                                                Due:{" "}
+                                                {new Date(
+                                                  task.dueDate,
+                                                ).toLocaleDateString()}
+                                              </p>
+                                            )}
                                             <div className="flex flex-wrap gap-2 mt-4">
                                               <button
                                                 onClick={() =>
@@ -1202,7 +1151,7 @@ const taskAnalytics = [
                                                 onClick={() =>
                                                   handleTaskDelete(
                                                     task._id,
-                                                    project._id
+                                                    project._id,
                                                   )
                                                 }
                                                 className="flex items-center gap-1 bg-red-500 hover:bg-red-600 px-3 py-1 rounded-lg text-sm"
@@ -1218,10 +1167,9 @@ const taskAnalytics = [
                                   </Draggable>
                                 ))}
                               {provided.placeholder}
-                              {tasks[project._id]
-                                ?.filter((task) =>
-                                  task.status === status
-                                ).length === 0 && (
+                              {tasks[project._id]?.filter(
+                                (task) => task.status === status,
+                              ).length === 0 && (
                                 <p className="text-slate-500 text-sm">
                                   No tasks
                                 </p>
@@ -1237,15 +1185,12 @@ const taskAnalytics = [
                   <div className="flex justify-between items-center mt-6 gap-3">
                     <button
                       onClick={() =>
-                        handleGenerateAI(
-                          project._id,
-                          project.title
-                        )
+                        handleGenerateAI(project._id, project.title)
                       }
                       className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-xl transition-all w-full"
                     >
                       <Plus size={16} />
-                    Generate AI Tasks
+                      Generate AI Tasks
                     </button>
                     <button
                       onClick={() => handleEdit(project)}
@@ -1266,10 +1211,7 @@ const taskAnalytics = [
               ))
             ) : (
               <div className="col-span-full text-center py-24">
-                <FolderKanban
-                  className="mx-auto text-slate-600"
-                  size={70}
-                />
+                <FolderKanban className="mx-auto text-slate-600" size={70} />
                 <h2 className="text-3xl font-bold text-slate-300 mt-5">
                   No Projects Found
                 </h2>

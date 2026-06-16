@@ -11,6 +11,7 @@ export const createTask = async (req, res) => {
       priority,
       dueDate,
       project,
+      assignedTo,
     } = req.body;
 
     const task = await Task.create({
@@ -19,6 +20,7 @@ export const createTask = async (req, res) => {
       status,
       priority,
       dueDate,
+      assignedTo,
       project,
       user: req.user.id,
     });
@@ -46,9 +48,11 @@ export const getTasks = async (req, res) => {
     const tasks = await Task.find({
       project: req.params.projectId,
       user: req.user.id,
-    }).sort({
-      createdAt: -1,
-    });
+    })
+      .populate("assignedTo", "name email profilePic")
+      .sort({
+        createdAt: -1,
+      });
 
     res.status(200).json(tasks);
 
@@ -200,6 +204,37 @@ export const uploadTaskFile = async (
       message: "Attachment added",
       url: fileUrl,
       task,
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+export const updateTaskFile = async (req, res) => {
+  try {
+    const task = await Task.findById(req.body.taskId);
+
+    if (!task) {
+      return res.status(404).json({
+        message: "Task not found",
+      });
+    }
+
+    const fileData = {
+      filename: req.file.filename,
+      url: `http://localhost:5000/uploads/${req.file.filename}`,
+    };
+
+    task.attachments.push(fileData);
+
+    await task.save();
+
+    res.status(200).json({
+      message: "File uploaded successfully",
+      file: fileData,
     });
 
   } catch (error) {
