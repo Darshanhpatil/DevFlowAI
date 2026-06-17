@@ -47,6 +47,8 @@ import {
   YAxis,
 } from "recharts";
 
+import { getMessages, sendMessage } from "../services/chatService";
+
 import { generateAITasks } from "../services/aiService";
 
 import { uploadTaskFile } from "../services/taskService";
@@ -81,11 +83,26 @@ function Dashboard() {
   const [editingTask, setEditingTask] = useState(null);
   const [memberEmail, setMemberEmail] = useState("");
   const [assignedUser, setAssignedUser] = useState("");
+  const [messages, setMessages] = useState({});
+  const [chatInput, setChatInput] = useState({});
   const [editTaskData, setEditTaskData] = useState({
     title: "",
     description: "",
     status: "Pending",
   });
+
+  const fetchMessages = async (projectId) => {
+    try {
+      const { data } = await getMessages(projectId);
+
+      setMessages((prev) => ({
+        ...prev,
+        [projectId]: data,
+      }));
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   // PROJECT FORM
   const [formData, setFormData] = useState({
@@ -336,6 +353,8 @@ function Dashboard() {
         return toast.error("Please fill all task fields");
       }
 
+      console.log("Current Task:", currentTask);
+
       await createTask({
         title: currentTask.title,
         description: currentTask.description,
@@ -343,6 +362,7 @@ function Dashboard() {
         priority: currentTask.priority || "Medium",
         dueDate: currentTask.dueDate || null,
         project: projectId,
+        assignedTo: currentTask.assignedTo, // <-- ADD THIS
       });
 
       toast.success("Task Created");
@@ -422,6 +442,30 @@ function Dashboard() {
       console.log(error);
 
       toast.error("Upload Failed");
+    }
+  };
+
+  const handleSendMessage = async (projectId) => {
+    try {
+      console.log("Sending message...");
+
+      const message = chatInput[projectId];
+
+      if (!message) return;
+
+      await sendMessage({
+        projectId,
+        text: message,
+      });
+
+      setChatInput((prev) => ({
+        ...prev,
+        [projectId]: "",
+      }));
+
+      fetchMessages(projectId);
+    } catch (error) {
+      console.log(error);
     }
   };
 
@@ -892,8 +936,14 @@ function Dashboard() {
                     </select>
 
                     <select
-                      value={assignedUser}
-                      onChange={(e) => setAssignedUser(e.target.value)}
+                      value={taskFormData[project._id]?.assignedTo || ""}
+                      onChange={(e) =>
+                        handleTaskInputChange(
+                          project._id,
+                          "assignedTo",
+                          e.target.value,
+                        )
+                      }
                       className="w-full p-3 rounded-xl bg-slate-800"
                     >
                       <option value="">Assign Member</option>
@@ -978,7 +1028,7 @@ function Dashboard() {
                                 .map((task, index) => (
                                   <Draggable
                                     key={task._id}
-                                    draggableId={task._id}
+                                    draggableId={String(task._id)}
                                     index={index}
                                   >
                                     {(provided) => (
@@ -1067,16 +1117,21 @@ function Dashboard() {
                                             <h3 className="font-semibold wrap-break-word">
                                               {task.title}
                                             </h3>
+                                            <div className="text-blue-400 text-sm mt-1">
+                                              👤 Assigned To:
+                                              {task.assignedTo?.name ||
+                                                "Not Assigned"}
+                                            </div>
 
                                             <span
                                               className={`inline-block mt-2 text-xs px-2 py-1 rounded-full
                                                 ${
                                                   task.priority === "High"
-                                                   ? "bg-red-500 text-white"
+                                                    ? "bg-red-500 text-white"
                                                     : task.priority === "Medium"
-                                                     ? "bg-yellow-500 text-black"
+                                                      ? "bg-yellow-500 text-black"
                                                       : "bg-green-500 text-white"
-                                                      }`}
+                                                }`}
                                             >
                                               {task.priority}
                                             </span>
@@ -1180,6 +1235,47 @@ function Dashboard() {
                       ))}
                     </div>
                   </DragDropContext>
+
+                  {
+                    <div className="mt-6">
+                      <h3 className="font-bold mb-2">Team Chat</h3>
+
+                      <div className="bg-slate-800 rounded-xl p-3 h-48 overflow-y-auto">
+                        {messages[project._id]?.map((msg) => (
+                          <div key={msg._id} className="mb-2">
+                            <span className="text-blue-400">
+                              {msg.sender?.name}
+                            </span>
+
+                            <p>{msg.text}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex mt-2">
+                        <input
+                          type="text"
+                          placeholder="Type message..."
+                          value={chatInput[project._id] || ""}
+                          onChange={(e) =>
+                            setChatInput((prev) => ({
+                              ...prev,
+                              [project._id]: e.target.value,
+                            }))
+                          }
+                        />
+
+                        <button
+                          onClick={() => {
+                            console.log("SEND CLICKED");
+                            handleSendMessage(project._id);
+                          }}
+                        >
+                          Send
+                        </button>
+                      </div>
+                    </div>
+                  }
 
                   {/* FOOTER */}
                   <div className="flex justify-between items-center mt-6 gap-3">

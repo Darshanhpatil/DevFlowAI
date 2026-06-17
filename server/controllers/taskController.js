@@ -15,13 +15,14 @@ export const createTask = async (req, res) => {
     } = req.body;
 
     const task = await Task.create({
-      title,
-      description,
-      status,
-      priority,
-      dueDate,
-      assignedTo,
-      project,
+      console.log("Task Date :"),
+      title: req.body.title,
+      description: req.body.description,
+      status: req.body.status,
+      priority: req.body.priority,
+      dueDate: req.body.dueDate,
+      project: req.body.project,
+      assignedTo: req.body.assignedTo, // <-- IMPORTANT
       user: req.user.id,
     });
 
@@ -34,7 +35,6 @@ export const createTask = async (req, res) => {
     io.emit("taskCreated");
 
     res.status(201).json(task);
-
   } catch (error) {
     res.status(500).json({
       message: error.message,
@@ -49,13 +49,13 @@ export const getTasks = async (req, res) => {
       project: req.params.projectId,
       user: req.user.id,
     })
-      .populate("assignedTo", "name email profilePic")
+      .populate
+      ("assignedTo", "name email profilePic")
       .sort({
         createdAt: -1,
       });
 
     res.status(200).json(tasks);
-
   } catch (error) {
     res.status(500).json({
       message: error.message,
@@ -66,9 +66,7 @@ export const getTasks = async (req, res) => {
 // UPDATE TASK
 export const updateTask = async (req, res) => {
   try {
-    const task = await Task.findById(
-      req.params.id
-    );
+    const task = await Task.findById(req.params.id);
 
     if (!task) {
       return res.status(404).json({
@@ -76,23 +74,15 @@ export const updateTask = async (req, res) => {
       });
     }
 
-    if (
-      task.user.toString() !==
-      req.user.id
-    ) {
+    if (task.user.toString() !== req.user.id) {
       return res.status(403).json({
         message: "Unauthorized",
       });
     }
 
-    const updatedTask =
-      await Task.findByIdAndUpdate(
-        req.params.id,
-        req.body,
-        {
-          new: true,
-        }
-      );
+    const updatedTask = await Task.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
 
     await Activity.create({
       action: `Updated task "${updatedTask.title}"`,
@@ -102,10 +92,7 @@ export const updateTask = async (req, res) => {
     const io = req.app.get("io");
     io.emit("taskUpdated");
 
-    res.status(200).json(
-      updatedTask
-    );
-
+    res.status(200).json(updatedTask);
   } catch (error) {
     res.status(500).json({
       message: error.message,
@@ -116,9 +103,7 @@ export const updateTask = async (req, res) => {
 // DELETE TASK
 export const deleteTask = async (req, res) => {
   try {
-    const task = await Task.findById(
-      req.params.id
-    );
+    const task = await Task.findById(req.params.id);
 
     if (!task) {
       return res.status(404).json({
@@ -126,10 +111,7 @@ export const deleteTask = async (req, res) => {
       });
     }
 
-    if (
-      task.user.toString() !==
-      req.user.id
-    ) {
+    if (task.user.toString() !== req.user.id) {
       return res.status(403).json({
         message: "Unauthorized",
       });
@@ -148,7 +130,6 @@ export const deleteTask = async (req, res) => {
     res.status(200).json({
       message: "Task deleted",
     });
-
   } catch (error) {
     res.status(500).json({
       message: error.message,
@@ -157,14 +138,9 @@ export const deleteTask = async (req, res) => {
 };
 
 // UPLOAD TASK FILE
-export const uploadTaskFile = async (
-  req,
-  res
-) => {
+export const uploadTaskFile = async (req, res) => {
   try {
-    const task = await Task.findById(
-      req.params.id
-    );
+    const task = await Task.findById(req.params.id);
 
     if (!task) {
       return res.status(404).json({
@@ -172,26 +148,22 @@ export const uploadTaskFile = async (
       });
     }
 
-    if (
-      task.user.toString() !==
-      req.user.id
-    ) {
+    if (task.user.toString() !== req.user.id) {
       return res.status(403).json({
         message: "Unauthorized",
       });
     }
 
-    const fileUrl =
-      `http://localhost:5000/uploads/${req.file.filename}`;
+    const fileUrl = `http://localhost:5000/uploads/${req.file.filename}`;
 
     if (!task.attachments) {
       task.attachments = [];
     }
 
     task.attachments.push({
-  filename: req.file.originalname,
-  url: fileUrl,
-});
+      filename: req.file.originalname,
+      url: fileUrl,
+    });
 
     await task.save();
 
@@ -205,7 +177,6 @@ export const uploadTaskFile = async (
       url: fileUrl,
       task,
     });
-
   } catch (error) {
     res.status(500).json({
       message: error.message,
@@ -236,7 +207,6 @@ export const updateTaskFile = async (req, res) => {
       message: "File uploaded successfully",
       file: fileData,
     });
-
   } catch (error) {
     res.status(500).json({
       message: error.message,

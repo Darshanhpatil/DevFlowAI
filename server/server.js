@@ -14,6 +14,7 @@ import path from "path";
 import testRoutes from "./routes/testRoutes.js";
 import "./cron/taskReminder.js";
 import reportRoutes from "./routes/reportRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
 
 connectDB();
 
@@ -38,6 +39,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/chat",chatRoutes);
 
 app.get("/", (req, res) => {
   res.send("DevFlow AI API Running");
