@@ -15,7 +15,6 @@ export const createTask = async (req, res) => {
     } = req.body;
 
     const task = await Task.create({
-      console.log("Task Date :"),
       title: req.body.title,
       description: req.body.description,
       status: req.body.status,
