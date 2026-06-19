@@ -46,7 +46,7 @@ function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
 
-      <div className="bg-slate-900 p-8 rounded-2xl w-[400px] shadow-lg">
+      <div className="bg-slate-900 p-8 rounded-2xl w-100 shadow-lg">
 
         <h1 className="text-3xl font-bold mb-6 text-center">
           Login
