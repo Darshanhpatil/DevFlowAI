@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 
 // GENERATE JWT TOKEN
 const generateToken = (id) => {
+
   return jwt.sign(
     { id },
     process.env.JWT_SECRET,

@@ -1,5 +1,8 @@
 import Task from "../models/Task.js";
 import Activity from "../models/Activity.js";
+import Notification from "../models/Notification.js";
+import User from "../models/User.js";
+import sendEmail from "../utils/sendEmail.js";
 
 // CREATE TASK
 export const createTask = async (req, res) => {
@@ -25,6 +28,47 @@ export const createTask = async (req, res) => {
       user: req.user.id,
     });
 
+    if (task.assignedTo) {
+      const assignedUser = await User.findById(task.assignedTo);
+
+      if (assignedUser) {
+        await sendEmail(
+          assignedUser.email,
+
+          "New Task Assigned - DevFlow AI",
+
+          `
+Hello ${assignedUser.name},
+
+You have been assigned a new task.
+
+Task: ${task.title}
+
+Description:
+${task.description}
+
+Priority: ${task.priority}
+
+Due Date:
+${task.dueDate ? new Date(task.dueDate).toDateString() : "Not Set"}
+
+Please login to DevFlow AI
+to view details.
+
+Regards,
+DevFlow AI Team
+`,
+        );
+      }
+    }
+
+    if (assignedTo) {
+      await Notification.create({
+        user: assignedTo,
+        message: `You have been assigned task "${title}"`,
+      });
+    }
+
     await Activity.create({
       action: `Added task "${task.title}"`,
       user: req.user.id,
@@ -48,8 +92,7 @@ export const getTasks = async (req, res) => {
       project: req.params.projectId,
       user: req.user.id,
     })
-      .populate
-      ("assignedTo", "name email profilePic")
+      .populate("assignedTo", "name email profilePic")
       .sort({
         createdAt: -1,
       });

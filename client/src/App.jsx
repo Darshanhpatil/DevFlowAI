@@ -7,18 +7,22 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
-
-import ProtectedRoute from "./routes/ProtectedRoute";
 import Settings from "./pages/Settings";
 
-function App() {
+import AIPlanner from "./pages/AIPlanner";
+import PlanResult from "./pages/PlanResult";
+import PlanHistory from "./pages/PlanHistory";
 
+import ProtectedRoute from "./routes/ProtectedRoute";
+
+function App() {
   return (
     <BrowserRouter>
-
       <Toaster position="top-right" />
 
       <Routes>
+
+        {/* Public Routes */}
 
         <Route
           path="/"
@@ -35,13 +39,13 @@ function App() {
           element={<Register />}
         />
 
+        {/* Protected Routes */}
+
         <Route
           path="/dashboard"
           element={
             <ProtectedRoute>
-
               <Dashboard />
-
             </ProtectedRoute>
           }
         />
@@ -50,9 +54,7 @@ function App() {
           path="/profile"
           element={
             <ProtectedRoute>
-
               <Profile />
-
             </ProtectedRoute>
           }
         />
@@ -61,15 +63,41 @@ function App() {
           path="/settings"
           element={
             <ProtectedRoute>
-
               <Settings />
+            </ProtectedRoute>
+          }
+        />
 
+        {/* AI Planner */}
+
+        <Route
+          path="/ai-planner"
+          element={
+            <ProtectedRoute>
+              <AIPlanner />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/plan-result"
+          element={
+            <ProtectedRoute>
+              <PlanResult />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/plan-history"
+          element={
+            <ProtectedRoute>
+              <PlanHistory />
             </ProtectedRoute>
           }
         />
 
       </Routes>
-
     </BrowserRouter>
   );
 }

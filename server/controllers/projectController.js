@@ -1,5 +1,6 @@
+import User from "../models/User.js";
 import Project from "../models/Project.js";
-
+import sendEmail from "../utils/sendEmail.js";
 
 // CREATE PROJECT
 export const createProject = async (req, res) => {
@@ -117,8 +118,6 @@ export const deleteProject = async (req, res) => {
   }
 };
 
-import User from "../models/User.js";
-
 export const addMemberToProject = async (
   req,
   res
@@ -164,6 +163,27 @@ export const addMemberToProject = async (
     );
 
     await project.save();
+    await sendEmail(
+  user.email,
+
+  "You've Been Added To A Project 🚀",
+
+  `
+Hello ${user.name},
+
+You have been added to the project:
+
+${project.title}
+
+Description:
+${project.description}
+
+Login to DevFlow AI and start collaborating with your team.
+
+Regards,
+DevFlow AI Team
+`
+);
 
     res.status(200).json({
       message:

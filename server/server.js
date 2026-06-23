@@ -15,12 +15,16 @@ import testRoutes from "./routes/testRoutes.js";
 import "./cron/taskReminder.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import aiPlannerRoutes from "./routes/aiPlannerRoutes.js";
+import notificationRoutes
+from "./routes/notificationRoutes.js";
+import {
+  startReminderJob,
+} from "./services/reminderService.js";
 
 connectDB();
 
 const app = express();
-
-console.log("Gemini Key:", process.env.GEMINI_API_KEY);
 
 app.use(cors());
 
@@ -34,12 +38,22 @@ app.use("/api/reports", reportRoutes);
 
 app.use("/api/test", testRoutes);
 
+app.use(
+  "/api/notifications",
+  notificationRoutes
+);
+
 // ROUTES
 app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/chat",chatRoutes);
+
+app.use(
+  "/api/ai-planner",
+  aiPlannerRoutes
+);
 
 app.get("/", (req, res) => {
   res.send("DevFlow AI API Running");
@@ -80,6 +94,3 @@ app.set("io", io);
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-
-console.log("EMAIL_USER:", process.env.EMAIL_USER);
-console.log("EMAIL_PASS:", process.env.EMAIL_PASS);

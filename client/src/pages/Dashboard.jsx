@@ -4,6 +4,8 @@ import toast from "react-hot-toast";
 import axios from "axios";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
+import TaskCalendar from "../components/TaskCalendar";
+
 import {
   getProjects,
   createProject,
@@ -25,6 +27,7 @@ import {
   Pencil,
   Trash2,
   Plus,
+  Bell,
   CheckCircle2,
   Clock3,
   Loader2,
@@ -46,6 +49,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+
+import {
+  getNotifications,
+  markNotificationRead,
+} from "../services/notificationService";
 
 import { getMessages, sendMessage } from "../services/chatService";
 
@@ -78,13 +86,15 @@ function Dashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [editId, setEditId] = useState(null);
-
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [tasks, setTasks] = useState({});
   const [editingTask, setEditingTask] = useState(null);
   const [memberEmail, setMemberEmail] = useState("");
   const [assignedUser, setAssignedUser] = useState("");
   const [messages, setMessages] = useState({});
   const [chatInput, setChatInput] = useState({});
+  const allTasks = Object.values(tasks).flat();
   const [editTaskData, setEditTaskData] = useState({
     title: "",
     description: "",
@@ -99,6 +109,16 @@ function Dashboard() {
         ...prev,
         [projectId]: data,
       }));
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const { data } = await getNotifications();
+
+      setNotifications(data);
     } catch (error) {
       console.log(error);
     }
@@ -171,6 +191,7 @@ function Dashboard() {
 
   useEffect(() => {
     fetchProjects();
+    fetchNotifications();
   }, []);
 
   useEffect(() => {
@@ -230,8 +251,6 @@ function Dashboard() {
       value: projects.filter((p) => p.status === "Completed").length,
     },
   ];
-
-  const allTasks = Object.values(tasks).flat();
 
   const taskAnalytics = [
     {
@@ -492,9 +511,11 @@ function Dashboard() {
     try {
       const data = await generateAITasks(projectTitle);
 
-      const aiTasks = data.tasks;
+      console.log("AI Tasks:", data.tasks);
 
-      for (const task of aiTasks) {
+      for (const task of data.tasks) {
+        console.log("Creating:", task);
+
         await createTask({
           title: task.title,
           description: task.description,
@@ -508,8 +529,6 @@ function Dashboard() {
       fetchTasks(projectId);
     } catch (error) {
       console.log(error);
-
-      toast.error("AI Generation Failed");
     }
   };
 
@@ -558,6 +577,52 @@ function Dashboard() {
               Welcome {user?.name}
             </h1>
             <p className="text-slate-400 mt-3 text-lg">DevFlowAI Dashboard</p>
+          </div>
+          <div className="relative">
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative"
+            >
+              <Bell size={28} />
+
+              {notifications.filter((n) => !n.isRead).length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 rounded-full">
+                  {notifications.filter((n) => !n.isRead).length}
+                </span>
+              )}
+            </button>
+
+            {showNotifications && (
+              <div className="absolute right-0 mt-3 w-80 bg-slate-900 border border-slate-700 rounded-xl p-4 z-50 max-h-96 overflow-y-auto">
+                <h3 className="font-bold mb-3">Notifications</h3>
+
+                {notifications.length === 0 ? (
+                  <p className="text-slate-400">No notifications</p>
+                ) : (
+                  notifications.map((notification) => (
+                    <div
+                      key={notification._id}
+                      className="p-3 border-b border-slate-800"
+                    >
+                      <p>{notification.message}</p>
+
+                      {!notification.isRead && (
+                        <button
+                          onClick={async () => {
+                            await markNotificationRead(notification._id);
+
+                            fetchNotifications();
+                          }}
+                          className="text-blue-400 text-sm mt-1"
+                        >
+                          Mark as Read
+                        </button>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
           <div className="flex gap-3 flex-wrap">
             <button
@@ -788,6 +853,36 @@ function Dashboard() {
               {editId ? "Update Project" : "Create Project"}
             </button>
           </form>
+        </div>
+
+        <div className="bg-[#0B1739] border border-[#1E2A4A] rounded-3xl p-8 mt-8">
+          <h2 className="text-4xl font-bold text-white mb-3">
+            🤖 AI Project Planner
+          </h2>
+
+          <p className="text-gray-400 mb-6">
+            Generate complete project blueprints using AI. Get Features, Tech
+            Stack, Database Design, Development Roadmap and Deployment Plan
+            instantly.
+          </p>
+
+          <button
+            onClick={() => navigate("/ai-planner")}
+            className="
+      bg-linear-to-r
+      from-purple-600
+      to-blue-600
+      hover:scale-105
+      transition
+      px-8
+      py-4
+      rounded-xl
+      text-white
+      font-semibold
+    "
+          >
+            🚀 Generate AI Plan
+          </button>
         </div>
 
         {/* SEARCH + FILTER */}
@@ -1318,6 +1413,28 @@ function Dashboard() {
             )}
           </div>
         )}
+      </div>
+      {/* CALENDAR VIEW */}
+      <div className="mt-12">
+        <div className="bg-linear-to-br from-slate-900 to-slate-950 border border-slate-700 rounded-3xl p-8 shadow-2xl">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-4xl font-bold text-white">
+                📅 Calendar View
+              </h2>
+
+              <p className="text-slate-400 mt-2">
+                Track deadlines and upcoming project tasks
+              </p>
+            </div>
+
+            <div className="bg-blue-600 px-4 py-2 rounded-xl text-white font-semibold">
+              {allTasks.length} Tasks
+            </div>
+          </div>
+
+          <TaskCalendar tasks={allTasks} />
+        </div>
       </div>
     </div>
   );
